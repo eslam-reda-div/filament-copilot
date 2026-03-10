@@ -1,0 +1,5 @@
+<?php
+
+namespace EslamWeb\FilamentCopilot\Commands;
+
+// Placeholder for package commands

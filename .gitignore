@@ -1,0 +1,6 @@
+/vendor
+/node_modules
+/resources/dist
+composer.lock
+package-lock.json
+.phpunit.result.cache
