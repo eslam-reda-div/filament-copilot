@@ -8,7 +8,7 @@
 @if ($isUser)
     <div class="flex items-start gap-3 justify-end">
         <div class="max-w-[85%] rounded-lg px-3 py-2 bg-primary-600 text-white">
-            <p class="text-sm whitespace-pre-wrap break-words">{{ $msg['content'] }}</p>
+            <p class="text-sm whitespace-pre-wrap wrap-break-word">{{ $msg['content'] }}</p>
         </div>
         <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
             <x-filament::icon icon="heroicon-o-user" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
@@ -21,7 +21,7 @@
             <x-filament::icon icon="heroicon-o-sparkles" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
         </div>
         <div class="max-w-[85%] rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-            <div class="text-sm prose prose-sm dark:prose-invert max-w-none break-words">
+            <div class="text-sm prose prose-sm dark:prose-invert max-w-none wrap-break-word">
                 {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
             </div>
         </div>

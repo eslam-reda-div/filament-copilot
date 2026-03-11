@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 
 class TokenUsageChart extends ChartWidget
 {
-    protected static ?string $heading = null;
+    protected ?string $heading = null;
 
     protected static ?int $sort = 1;
 

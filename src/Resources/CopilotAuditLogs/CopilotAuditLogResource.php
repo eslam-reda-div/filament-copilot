@@ -15,9 +15,9 @@ class CopilotAuditLogResource extends Resource
 {
     protected static ?string $model = CopilotAuditLog::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationGroup = 'Copilot';
+    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 3;
 

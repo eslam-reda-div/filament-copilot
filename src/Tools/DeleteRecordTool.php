@@ -26,17 +26,19 @@ class DeleteRecordTool extends BaseTool
 
     public function handle(Request $request): Stringable|string
     {
-        $resourceClass = $this->resolveResource($request['resource']);
+        $resource = (string) $request['resource'];
+        $resourceClass = $this->resolveResource($resource);
 
         if (! $resourceClass) {
-            return "Resource '{$request['resource']}' not found.";
+            return "Resource '{$resource}' not found.";
         }
 
         $modelClass = $resourceClass::getModel();
-        $record = $modelClass::find($request['id']);
+        $id = (string) $request['id'];
+        $record = $modelClass::find($id);
 
         if (! $record) {
-            return "Record #{$request['id']} not found.";
+            return "Record #{$id} not found.";
         }
 
         if (! $this->authorizeDelete($resourceClass, $record)) {

@@ -18,9 +18,9 @@ class CopilotRateLimitResource extends Resource
 {
     protected static ?string $model = CopilotRateLimit::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
-    protected static ?string $navigationGroup = 'Copilot';
+    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 2;
 

@@ -26,7 +26,7 @@ class GetWidgetDataTool extends BaseTool
 
     public function handle(Request $request): Stringable|string
     {
-        $widgetName = $request['widget'];
+        $widgetName = (string) $request['widget'];
         $panel = Filament::getCurrentPanel();
 
         if (! $panel) {

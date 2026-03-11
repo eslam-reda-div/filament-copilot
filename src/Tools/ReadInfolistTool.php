@@ -26,17 +26,19 @@ class ReadInfolistTool extends BaseTool
 
     public function handle(Request $request): Stringable|string
     {
-        $resourceClass = $this->resolveResource($request['resource']);
+        $resource = (string) $request['resource'];
+        $resourceClass = $this->resolveResource($resource);
 
         if (! $resourceClass) {
-            return "Resource '{$request['resource']}' not found.";
+            return "Resource '{$resource}' not found.";
         }
 
         $modelClass = $resourceClass::getModel();
-        $record = $modelClass::find($request['record_id']);
+        $recordId = (string) $request['record_id'];
+        $record = $modelClass::find($recordId);
 
         if (! $record) {
-            return "Record #{$request['record_id']} not found.";
+            return "Record #{$recordId} not found.";
         }
 
         if (! $this->authorizeView($resourceClass, $record)) {
@@ -48,7 +50,7 @@ class ReadInfolistTool extends BaseTool
         // Check if the resource has a ViewRecord page with an infolist
         $pages = $resourceClass::getPages();
         if (! isset($pages['view'])) {
-            return "Resource '{$request['resource']}' does not have a view page with an infolist.";
+            return "Resource '{$resource}' does not have a view page with an infolist.";
         }
 
         $lines = [

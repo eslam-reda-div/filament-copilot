@@ -30,8 +30,8 @@ class RememberTool extends BaseTool
             return 'Memory feature is disabled.';
         }
 
-        $key = $request['key'];
-        $value = $request['value'];
+        $key = (string) $request['key'];
+        $value = (string) $request['value'];
 
         // Check memory limit
         $currentCount = CopilotAgentMemory::query()

@@ -18,9 +18,9 @@ class CopilotConversationResource extends Resource
 {
     protected static ?string $model = CopilotConversation::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
 
-    protected static ?string $navigationGroup = 'Copilot';
+    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 1;
 

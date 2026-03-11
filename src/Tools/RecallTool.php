@@ -29,7 +29,7 @@ class RecallTool extends BaseTool
             return 'Memory feature is disabled.';
         }
 
-        $key = $request['key'];
+        $key = $request['key'] !== null ? (string) $request['key'] : null;
 
         if ($key) {
             $value = CopilotAgentMemory::recall(

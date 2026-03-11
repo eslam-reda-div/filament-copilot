@@ -263,7 +263,9 @@ class FilamentCopilotPlugin implements Plugin
         if ($this->isChatEnabled()) {
             FilamentView::registerRenderHook(
                 PanelsRenderHook::BODY_END,
-                fn (): string => Blade::render('@livewire(\'filament-copilot-chat\') @livewire(\'filament-copilot-button\')'),
+                fn (): string => auth()->check()
+                    ? Blade::render('@livewire(\'filament-copilot-chat\') @livewire(\'filament-copilot-button\')')
+                    : '',
             );
         }
     }

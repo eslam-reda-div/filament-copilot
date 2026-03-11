@@ -11,13 +11,13 @@ use Filament\Pages\Page;
 
 class CopilotDashboardPage extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static ?string $navigationGroup = 'Copilot';
+    protected static string | \UnitEnum | null $navigationGroup = 'Copilot';
 
     protected static ?int $navigationSort = 0;
 
-    protected static string $view = 'filament-copilot::pages.copilot-dashboard';
+    protected string $view = 'filament-copilot::pages.copilot-dashboard';
 
     public static function getNavigationLabel(): string
     {

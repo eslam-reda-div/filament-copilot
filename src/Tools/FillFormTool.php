@@ -27,10 +27,11 @@ class FillFormTool extends BaseTool
 
     public function handle(Request $request): Stringable|string
     {
-        $resourceClass = $this->resolveResource($request['resource']);
+        $resource = (string) $request['resource'];
+        $resourceClass = $this->resolveResource($resource);
 
         if (! $resourceClass) {
-            return "Resource '{$request['resource']}' not found.";
+            return "Resource '{$resource}' not found.";
         }
 
         $dataRaw = $request['data'];
@@ -40,7 +41,7 @@ class FillFormTool extends BaseTool
             return 'Invalid data format. Provide a JSON object of field:value pairs.';
         }
 
-        $recordId = $request['record_id'];
+        $recordId = $request['record_id'] !== null ? (string) $request['record_id'] : null;
         $mode = $recordId ? 'edit' : 'create';
 
         $this->audit(AuditAction::FormFilled, $resourceClass, $recordId, [

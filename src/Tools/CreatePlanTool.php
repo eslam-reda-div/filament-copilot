@@ -29,9 +29,9 @@ class CreatePlanTool extends BaseTool
 
     public function handle(Request $request): Stringable|string
     {
-        $conversationId = $request['conversation_id'];
-        $description = $request['description'];
-        $stepsJson = $request['steps'];
+        $conversationId = (string) $request['conversation_id'];
+        $description = (string) $request['description'];
+        $stepsJson = (string) $request['steps'];
 
         $conversation = CopilotConversation::find($conversationId);
 

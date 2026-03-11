@@ -154,7 +154,7 @@
     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
     x-transition:leave-end="opacity-0 translate-y-4" x-cloak @copilot-open.window="open = true"
     @copilot-close-sidebar.window="sidebarOpen = false" @copilot-load-conversation.window="sidebarOpen = false"
-    class="fixed bottom-20 right-6 z-50 flex flex-col w-[420px] h-[600px] max-h-[80vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    class="fixed bottom-20 right-6 z-50 flex flex-col w-105 h-150 max-h-[80vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
 
     {{-- Header --}}
     <div class="flex items-center justify-between px-4 py-3 bg-primary-600 dark:bg-primary-700 text-white shrink-0">
@@ -238,7 +238,7 @@
                     </div>
                     <div
                         class="max-w-[85%] rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                        <div class="text-sm prose prose-sm dark:prose-invert max-w-none break-words">
+                        <div class="text-sm prose prose-sm dark:prose-invert max-w-none wrap-break-word">
                             <p x-text="streamedContent" class="whitespace-pre-wrap"></p>
                         </div>
                         <span
@@ -257,7 +257,7 @@
                     </div>
                     <div
                         class="max-w-[85%] rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                        <div class="text-sm prose prose-sm dark:prose-invert max-w-none break-words">
+                        <div class="text-sm prose prose-sm dark:prose-invert max-w-none wrap-break-word">
                             <p x-text="streamedContent" class="whitespace-pre-wrap"></p>
                         </div>
                     </div>
@@ -358,11 +358,18 @@
                     @if (!empty($pendingPlan['steps']))
                         <ol class="mt-2 space-y-1">
                             @foreach ($pendingPlan['steps'] as $i => $step)
-                                <li
-                                    class="text-xs flex items-center gap-1.5
-                                    @if (!empty($pendingPlan['executing']) && $i < ($pendingPlan['current_step'] ?? 0)) text-green-600 dark:text-green-400 line-through
-                                    @elseif (!empty($pendingPlan['executing']) && $i === ($pendingPlan['current_step'] ?? 0)) text-amber-800 dark:text-amber-200 font-medium
-                                    @else text-amber-700 dark:text-amber-300 @endif">
+                                @php
+                                    $stepClass = 'text-amber-800 dark:text-amber-300';
+                                    if (!empty($pendingPlan['executing']) && $i < ($pendingPlan['current_step'] ?? 0)) {
+                                        $stepClass = 'text-green-600 dark:text-green-400 line-through';
+                                    } elseif (
+                                        !empty($pendingPlan['executing']) &&
+                                        $i === ($pendingPlan['current_step'] ?? 0)
+                                    ) {
+                                        $stepClass = 'text-amber-800 dark:text-amber-200 font-medium';
+                                    }
+                                @endphp
+                                <li class="text-xs flex items-center gap-1.5 {{ $stepClass }}">
                                     @if (!empty($pendingPlan['executing']) && $i < ($pendingPlan['current_step'] ?? 0))
                                         <x-filament::icon icon="heroicon-o-check-circle"
                                             class="w-3.5 h-3.5 text-green-500" />

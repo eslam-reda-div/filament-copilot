@@ -34,7 +34,7 @@ class ExportConversationTool extends BaseTool
             return 'Export feature is disabled.';
         }
 
-        $conversationId = $request['conversation_id'];
+        $conversationId = (string) $request['conversation_id'];
 
         // Verify ownership
         $conversation = CopilotConversation::find($conversationId);
