@@ -72,7 +72,8 @@ abstract class BaseTool implements Tool
     protected function getTableColumnNames(string $resourceClass): array
     {
         try {
-            $table = $resourceClass::table(Table::make(null));
+            /** @phpstan-ignore argument.type */
+            $table = $resourceClass::table(Table::make(app(\Filament\Tables\Contracts\HasTable::class)));
             $columns = $table->getColumns();
 
             return array_keys($columns);
