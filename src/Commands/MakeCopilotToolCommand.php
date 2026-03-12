@@ -11,16 +11,13 @@ use Filament\Facades\Filament;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
-use function Laravel\Prompts\select;
-use function Laravel\Prompts\text;
-
 class MakeCopilotToolCommand extends Command
 {
     protected $signature = 'make:copilot-tool';
 
     protected $description = 'Generate a Copilot tool for a Filament resource, page, or widget';
 
-    protected array $templates = [
+    protected array $resourceTemplates = [
         'list' => 'List records with pagination',
         'view' => 'View a single record by ID',
         'search' => 'Search records by keyword',
@@ -32,71 +29,217 @@ class MakeCopilotToolCommand extends Command
         'custom' => 'Custom tool (blank template)',
     ];
 
+    protected array $simpleTemplates = [
+        'custom' => 'Custom tool (blank template)',
+    ];
+
     public function handle(): int
     {
+        $this->newLine();
+        $this->info('🛠  Filament Copilot — Tool Generator');
+        $this->line('This wizard will guide you through creating a Copilot tool.');
+        $this->newLine();
+
+        // ── Step 1: Choose panel ──────────────────────────────────────
+
+        $this->section('Step 1/5 — Select panel');
+
         $panelIds = array_keys(Filament::getPanels());
 
         if (empty($panelIds)) {
-            $this->error('No Filament panels found.');
+            $this->error('No Filament panels found. Register at least one panel first.');
 
             return self::FAILURE;
         }
 
-        // Step 1: Choose panel
-        $panelId = select(
-            label: 'Which panel?',
-            options: $panelIds,
+        $this->line('Available panels:');
+        $this->newLine();
+
+        foreach ($panelIds as $id) {
+            $this->line("  • {$id}");
+        }
+
+        $this->newLine();
+
+        $panelId = $this->choice(
+            'Which panel should this tool belong to?',
+            $panelIds,
+            $panelIds[0],
         );
 
         $panel = Filament::getPanel($panelId);
 
-        // Step 2: Choose type
-        $type = select(
-            label: 'What type of tool?',
-            options: [
-                'resource' => 'Resource Tool',
-                'page' => 'Page Tool',
-                'widget' => 'Widget Tool',
-            ],
+        $this->info("✓ Panel: {$panelId}");
+
+        // ── Step 2: Choose type (resource / page / widget) ───────────
+
+        $this->section('Step 2/5 — Select tool type');
+
+        $typeLabels = [
+            'Resource Tool',
+            'Page Tool',
+            'Widget Tool',
+        ];
+
+        $typeKeys = ['resource', 'page', 'widget'];
+
+        $typeChoice = $this->choice(
+            'What type of tool do you want to create?',
+            $typeLabels,
+            $typeLabels[0],
         );
 
-        // Step 3: Choose target
-        $targetClass = $this->chooseTarget($panel, $type);
+        $type = $typeKeys[array_search($typeChoice, $typeLabels)];
 
-        if (! $targetClass) {
-            $this->error("No copilot-enabled {$type}s found in panel '{$panelId}'.");
+        $this->info("✓ Type: {$typeChoice}");
+
+        // ── Step 3: Choose target ────────────────────────────────────
+
+        $this->section('Step 3/5 — Select target');
+
+        $targets = $this->getTargets($panel, $type);
+
+        if (empty($targets)) {
+            $this->newLine();
+            $this->error("No copilot-enabled {$type}s found in the '{$panelId}' panel.");
+            $this->newLine();
+            $this->line('Make sure your ' . match ($type) {
+                'resource' => 'resource implements the CopilotResource interface.',
+                'page' => 'page implements the CopilotPage interface.',
+                'widget' => 'widget implements the CopilotWidget interface.',
+            });
 
             return self::FAILURE;
         }
 
-        // Step 4: Choose template
-        $templateOptions = $type === 'resource'
-            ? $this->templates
-            : ['custom' => 'Custom tool (blank template)'];
+        $targetLabels = array_values($targets);
+        $targetClasses = array_keys($targets);
 
-        $template = select(
-            label: 'Choose a template:',
-            options: $templateOptions,
+        $this->line("Available copilot-enabled {$type}s in '{$panelId}':");
+        $this->newLine();
+
+        foreach ($targetLabels as $label) {
+            $this->line("  • {$label}");
+        }
+
+        $this->newLine();
+
+        $selectedLabel = $this->choice(
+            "Which {$type}?",
+            $targetLabels,
+            $targetLabels[0],
         );
 
-        // Step 5: Tool class name
+        $selectedIndex = array_search($selectedLabel, $targetLabels);
+        $targetClass = $targetClasses[$selectedIndex];
+
+        $this->info("✓ Target: {$selectedLabel}");
+
+        // ── Step 4: Choose template ──────────────────────────────────
+
+        $this->section('Step 4/5 — Select template');
+
+        $templates = $type === 'resource'
+            ? $this->resourceTemplates
+            : $this->simpleTemplates;
+
+        $templateLabels = [];
+        $templateKeys = [];
+
+        foreach ($templates as $key => $description) {
+            $templateLabels[] = "{$key} — {$description}";
+            $templateKeys[] = $key;
+        }
+
+        $this->line('Available templates:');
+        $this->newLine();
+
+        foreach ($templateLabels as $label) {
+            $this->line("  • {$label}");
+        }
+
+        $this->newLine();
+
+        $templateChoice = $this->choice(
+            'Choose a template',
+            $templateLabels,
+            $templateLabels[0],
+        );
+
+        $template = $templateKeys[array_search($templateChoice, $templateLabels)];
+
+        $this->info("✓ Template: {$template}");
+
+        // ── Step 5: Tool class name ──────────────────────────────────
+
+        $this->section('Step 5/5 — Tool class name');
+
         $defaultName = $this->suggestToolName($targetClass, $template, $type);
 
-        $toolName = text(
-            label: 'Tool class name:',
-            default: $defaultName,
-            required: true,
+        $toolName = $this->ask(
+            'Enter the tool class name',
+            $defaultName,
         );
 
-        // Step 6: Generate
-        $outputPath = $this->generateTool($panelId, $type, $targetClass, $template, $toolName);
+        if (empty($toolName)) {
+            $toolName = $defaultName;
+        }
 
-        $this->info("Copilot tool created: {$outputPath}");
+        $toolName = Str::studly($toolName);
+
+        $this->info("✓ Class name: {$toolName}");
+
+        // ── Generate ─────────────────────────────────────────────────
+
+        $this->newLine();
+        $this->line(str_repeat('─', 60));
+        $this->newLine();
+
+        $this->line('⏳ Generating tool...');
+
+        $outputPath = $this->generateTool($type, $targetClass, $template, $toolName);
+
+        $this->newLine();
+        $this->info('🎉 Copilot tool created successfully!');
+        $this->newLine();
+
+        $relativePath = Str::after($outputPath, base_path() . DIRECTORY_SEPARATOR);
+
+        $this->table(
+            ['Setting', 'Value'],
+            [
+                ['Panel', $panelId],
+                ['Type', $typeChoice],
+                ['Target', class_basename($targetClass)],
+                ['Template', $template],
+                ['Class', $toolName],
+                ['Path', $relativePath],
+            ],
+        );
+
+        $this->newLine();
+        $this->line('Don\'t forget to register the tool in your ' . match ($type) {
+            'resource' => 'resource\'s copilotTools() method.',
+            'page' => 'page\'s copilotTools() method.',
+            'widget' => 'widget\'s copilotTools() method.',
+        });
 
         return self::SUCCESS;
     }
 
-    protected function chooseTarget($panel, string $type): ?string
+    protected function section(string $title): void
+    {
+        $this->newLine();
+        $this->line(str_repeat('─', 60));
+        $this->info($title);
+        $this->line(str_repeat('─', 60));
+        $this->newLine();
+    }
+
+    /**
+     * @return array<class-string, string>
+     */
+    protected function getTargets($panel, string $type): array
     {
         $options = [];
 
@@ -120,14 +263,7 @@ class MakeCopilotToolCommand extends Command
             }
         }
 
-        if (empty($options)) {
-            return null;
-        }
-
-        return select(
-            label: "Which {$type}?",
-            options: $options,
-        );
+        return $options;
     }
 
     protected function suggestToolName(string $targetClass, string $template, string $type): string
@@ -138,20 +274,23 @@ class MakeCopilotToolCommand extends Command
             $baseName = Str::before($baseName, 'Resource');
         }
 
+        $singular = Str::studly($baseName);
+        $plural = Str::pluralStudly($baseName);
+
         return match ($template) {
-            'list' => "List{$baseName}sTool",
-            'view' => "View{$baseName}Tool",
-            'search' => "Search{$baseName}sTool",
-            'create' => "Create{$baseName}Tool",
-            'edit' => "Edit{$baseName}Tool",
-            'delete' => "Delete{$baseName}Tool",
-            'force-delete' => "ForceDelete{$baseName}Tool",
-            'restore' => "Restore{$baseName}Tool",
-            default => "{$baseName}Tool",
+            'list' => "List{$plural}Tool",
+            'view' => "View{$singular}Tool",
+            'search' => "Search{$plural}Tool",
+            'create' => "Create{$singular}Tool",
+            'edit' => "Edit{$singular}Tool",
+            'delete' => "Delete{$singular}Tool",
+            'force-delete' => "ForceDelete{$singular}Tool",
+            'restore' => "Restore{$singular}Tool",
+            default => "{$singular}Tool",
         };
     }
 
-    protected function generateTool(string $panelId, string $type, string $targetClass, string $template, string $toolName): string
+    protected function generateTool(string $type, string $targetClass, string $template, string $toolName): string
     {
         $stubPath = __DIR__ . "/../../stubs/copilot-tool.{$template}.stub";
 
@@ -162,7 +301,7 @@ class MakeCopilotToolCommand extends Command
         $stub = file_get_contents($stubPath);
 
         // Determine output directory and namespace
-        [$namespace, $directory] = $this->resolveTarget($panelId, $type, $targetClass);
+        [$namespace, $directory] = $this->resolveTarget($type, $targetClass);
 
         // Replacements
         $resourceShortName = class_basename($targetClass);
@@ -198,39 +337,40 @@ class MakeCopilotToolCommand extends Command
         return $filePath;
     }
 
-    protected function resolveTarget(string $panelId, string $type, string $targetClass): array
+    protected function resolveTarget(string $type, string $targetClass): array
     {
         $baseName = class_basename($targetClass);
 
         if ($type === 'resource') {
-            // Resource tools go inside: {ResourceClass}/CopilotTools/
+            // Resource tools: {ResourceDir}/{ResourceBaseName}/CopilotTools/
             $resourceNamespace = Str::beforeLast($targetClass, '\\');
             $namespace = $resourceNamespace . '\\' . $baseName . '\\CopilotTools';
 
             $reflected = new \ReflectionClass($targetClass);
-            $resourceDir = dirname($reflected->getFileName());
+            $resourceDir = dirname((string) $reflected->getFileName());
             $directory = $resourceDir . '/' . $baseName . '/CopilotTools';
 
             return [$namespace, $directory];
         }
 
         if ($type === 'page') {
+            // Page tools: {PagesDir}/CopilotTools/{PageBaseName}/
             $pageNamespace = Str::beforeLast($targetClass, '\\');
             $namespace = $pageNamespace . '\\CopilotTools\\' . $baseName;
 
             $reflected = new \ReflectionClass($targetClass);
-            $pageDir = dirname($reflected->getFileName());
+            $pageDir = dirname((string) $reflected->getFileName());
             $directory = $pageDir . '/CopilotTools/' . $baseName;
 
             return [$namespace, $directory];
         }
 
-        // widget
+        // Widget tools: {WidgetsDir}/CopilotTools/{WidgetBaseName}/
         $widgetNamespace = Str::beforeLast($targetClass, '\\');
         $namespace = $widgetNamespace . '\\CopilotTools\\' . $baseName;
 
         $reflected = new \ReflectionClass($targetClass);
-        $widgetDir = dirname($reflected->getFileName());
+        $widgetDir = dirname((string) $reflected->getFileName());
         $directory = $widgetDir . '/CopilotTools/' . $baseName;
 
         return [$namespace, $directory];

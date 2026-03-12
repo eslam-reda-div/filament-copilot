@@ -47,9 +47,17 @@ class FilamentCopilotServiceProvider extends PackageServiceProvider
     public function packageBooted(): void
     {
         FilamentAsset::register([
-            Css::make('filament-copilot', __DIR__ . '/../resources/dist/filament-copilot.css'),
-            Js::make('filament-copilot', __DIR__ . '/../resources/dist/filament-copilot.js'),
+            Css::make('filament-copilot', asset('vendor/filament-copilot/filament-copilot.css')),
+            Js::make('filament-copilot', asset('vendor/filament-copilot/filament-copilot.js')),
         ], 'eslam-reda-div/filament-copilot');
+
+        $this->publishes([
+            __DIR__ . '/../resources/dist' => public_path('vendor/filament-copilot'),
+        ], 'filament-copilot-assets');
+
+        $this->publishes([
+            __DIR__ . '/../stubs' => base_path('stubs/filament-copilot'),
+        ], 'filament-copilot-stubs');
 
         if (class_exists(Livewire::class) && $this->app->bound('livewire')) {
             Livewire::component('filament-copilot-chat', CopilotChat::class);
