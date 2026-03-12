@@ -3,12 +3,10 @@
     sidebarOpen: false,
     sidebarLoading: false,
     conversationLoading: false,
-    streamingEnabled: @entangle('streamingEnabled'),
+    streamingEnabled: true,
     isStreaming: false,
     streamedContent: '',
     pendingComplete: false,
-    thinkingContent: '',
-    isThinking: false,
     toolCalls: [],
     _cleanups: [],
     _abortController: null,
@@ -41,8 +39,6 @@
 
                         this.pendingComplete = false;
                         this.streamedContent = '';
-                        this.thinkingContent = '';
-                        this.isThinking = false;
                         this.toolCalls = [];
                         this.isStreaming = false;
                     }
@@ -115,8 +111,6 @@
 
         this.isStreaming = true;
         this.streamedContent = '';
-        this.thinkingContent = '';
-        this.isThinking = false;
         this.toolCalls = [];
         this.pendingComplete = false;
 
@@ -170,19 +164,6 @@
                                     this.streamedContent += data.text;
                                     this.$nextTick(() => this.scrollToBottom());
                                     break;
-                                case 'thinking_start':
-                                    this.isThinking = true;
-                                    this.thinkingContent = '';
-                                    this.$nextTick(() => this.scrollToBottom());
-                                    break;
-                                case 'thinking_delta':
-                                    this.thinkingContent += data.delta;
-                                    this.$nextTick(() => this.scrollToBottom());
-                                    break;
-                                case 'thinking_end':
-                                    this.isThinking = false;
-                                    this.$nextTick(() => this.scrollToBottom());
-                                    break;
                                 case 'tool_call':
                                     this.toolCalls.push({
                                         id: data.tool_id,
@@ -203,41 +184,14 @@
                                 }
                                 this.$nextTick(() => this.scrollToBottom());
                                 break;
-                                case 'confirmation_required':
-                                    $wire.dispatchSelf('copilot-confirmation-required', {
-                                        confirmationKey: data.confirmation_key,
-                                        toolName: data.tool_name,
-                                        toolClass: data.tool_class,
-                                        sourceClass: data.source_class,
-                                        description: data.description,
-                                    });
-                                    break;
-                                case 'ask_user':
-                                    $wire.dispatchSelf('copilot-ask-user', {
-                                        question: data.question,
-                                        options: data.options || [],
-                                        context: data.context || null,
-                                    });
-                                    break;
                                 case 'navigate':
                                     // Queue navigation URL to execute after stream completes
                                     this._pendingNavigateUrl = data.url;
-                                    break;
-                                case 'plan_status':
-                                    $wire.dispatchSelf('copilot-plan-status', {
-                                        id: data.id,
-                                        status: data.status,
-                                        currentStep: data.current_step,
-                                        totalSteps: data.total_steps,
-                                        steps: data.steps,
-                                    });
                                     break;
                                 case 'error':
                                     $wire.dispatchSelf('copilot-stream-error', { error: data.message });
                                     this.isStreaming = false;
                                     this.streamedContent = '';
-                                    this.thinkingContent = '';
-                                    this.isThinking = false;
                                     this.toolCalls = [];
                                     break;
                                 case 'done':
@@ -258,12 +212,10 @@
                 this.pendingComplete = true;
                 this.isStreaming = false;
 
-                {{-- // Keep streamedContent visible — the x-show="pendingComplete && streamedContent" --}}
-                // overlay stays on screen until the Livewire morph replaces it.
+                // Keep streamedContent visible — overlay stays on screen until the Livewire morph replaces it.
                 $wire.dispatchSelf('copilot-stream-complete', {
                     content: this.streamedContent,
                     newConversationId: newConversationId,
-                    thinking: this.thinkingContent || null,
                     toolCalls: this.toolCalls.length ? JSON.parse(JSON.stringify(this.toolCalls)) : null,
                 });
 
@@ -286,8 +238,6 @@
                     }, 300);
                 }
                 this.isStreaming = false;
-                this.thinkingContent = '';
-                this.isThinking = false;
                 this.toolCalls = [];
             }
         } catch (error) {
@@ -297,8 +247,6 @@
             if (error.name === 'AbortError') {
                 this.isStreaming = false;
                 this.streamedContent = '';
-                this.thinkingContent = '';
-                this.isThinking = false;
                 this.toolCalls = [];
                 return;
             }
@@ -306,8 +254,6 @@
             $wire.dispatchSelf('copilot-stream-error', { error: error.message });
             this.isStreaming = false;
             this.streamedContent = '';
-            this.thinkingContent = '';
-            this.isThinking = false;
             this.toolCalls = [];
         }
     }
@@ -339,16 +285,13 @@
                     {{ __('filament-copilot::filament-copilot.title') }}</h2>
             </div>
             <div class="flex items-center gap-3">
-                @if (config('filament-copilot.export.enabled', true))
-                    <button x-show="$wire.conversationId" wire:click="exportConversation" wire:loading.attr="disabled"
-                        type="button"
-                        class="fi-icon-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 hover:bg-gray-500/5 dark:hover:bg-gray-400/5 fi-color-gray w-8 h-8"
-                        title="{{ __('filament-copilot::filament-copilot.export') }}">
-                        <x-filament::icon icon="heroicon-o-arrow-down-tray"
-                            class="w-5 h-5 text-gray-400 dark:text-gray-500" wire:loading.class="animate-pulse"
-                            wire:target="exportConversation" />
-                    </button>
-                @endif
+                <button x-show="$wire.conversationId" wire:click="exportConversation" wire:loading.attr="disabled"
+                    type="button"
+                    class="fi-icon-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 hover:bg-gray-500/5 dark:hover:bg-gray-400/5 fi-color-gray w-8 h-8"
+                    title="{{ __('filament-copilot::filament-copilot.export') }}">
+                    <x-filament::icon icon="heroicon-o-arrow-down-tray" class="w-5 h-5 text-gray-400 dark:text-gray-500"
+                        wire:loading.class="animate-pulse" wire:target="exportConversation" />
+                </button>
                 <button @click="toggleSidebar()" type="button"
                     class="fi-icon-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 w-8 h-8"
                     :class="sidebarOpen ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400' :
@@ -441,7 +384,7 @@
                         </div>
 
                         {{-- Quick Actions --}}
-                        @if (!empty(($quickActions = config('filament-copilot.quick_actions', []))))
+                        @if (!empty($quickActions))
                             <div class="flex flex-wrap justify-center gap-2 mt-1 max-w-sm">
                                 @foreach ($quickActions as $action)
                                     <button
@@ -462,39 +405,6 @@
                         @include('filament-copilot::components.chat-message', ['msg' => $msg])
                     @endforeach
                 @endif
-
-                {{-- Live Thinking Box (DeepSeek/ChatGPT style) --}}
-                <template x-if="(isThinking || thinkingContent) && isStreaming">
-                    <div class="flex items-start gap-2.5">
-                        <div
-                            class="w-7 h-7 rounded-full bg-info-100 dark:bg-info-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                            <x-filament::icon icon="heroicon-o-light-bulb"
-                                class="w-4 h-4 text-info-600 dark:text-info-400" />
-                        </div>
-                        <div class="min-w-0 max-w-[85%] w-full" x-data="{ thinkingOpen: true }">
-                            <button @click="thinkingOpen = !thinkingOpen" type="button"
-                                class="flex items-center gap-2 px-3 py-2 w-full rounded-t-xl bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 hover:bg-info-100 dark:hover:bg-info-900/30 transition-colors"
-                                :class="{ 'rounded-b-xl': !thinkingOpen }">
-                                <svg class="w-3.5 h-3.5 text-info-500 transition-transform duration-200"
-                                    :class="{ 'rotate-90': thinkingOpen }" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span class="text-xs font-medium text-info-700 dark:text-info-300">Thinking</span>
-                                <template x-if="isThinking">
-                                    <span class="w-1.5 h-1.5 bg-info-500 rounded-full animate-pulse"></span>
-                                </template>
-                            </button>
-                            <div x-show="thinkingOpen" x-collapse
-                                class="px-3 py-2 bg-info-50/50 dark:bg-info-900/10 border border-t-0 border-info-200 dark:border-info-800 rounded-b-xl">
-                                <p x-text="thinkingContent"
-                                    class="text-xs text-info-700 dark:text-info-300 whitespace-pre-wrap break-words font-mono leading-relaxed max-h-40 overflow-y-auto">
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </template>
 
                 {{-- Live Tool Call Boxes --}}
                 <template x-for="(tool, toolIdx) in toolCalls" :key="toolIdx">
@@ -591,7 +501,7 @@
                     </div>
                     <div
                         class="min-w-0 max-w-[85%] rounded-2xl rounded-tl-md px-3.5 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                        <div class="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words">
+                        <div class="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none wrap-break-word">
                             <p x-text="streamedContent" class="whitespace-pre-wrap"></p>
                         </div>
                         <span x-show="isStreaming"
@@ -638,253 +548,6 @@
                 </template>
             </div>
         </div>
-
-        {{-- AskUser / Human-in-the-loop Question Dialog --}}
-        @if ($pendingQuestion)
-            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                <div
-                    class="rounded-xl border border-info-200 dark:border-info-800 bg-info-50 dark:bg-info-900/10 overflow-hidden">
-                    <div
-                        class="flex items-center gap-2 px-3 py-2 bg-info-100 dark:bg-info-900/20 border-b border-info-200 dark:border-info-800">
-                        <x-filament::icon icon="heroicon-o-question-mark-circle"
-                            class="w-4 h-4 text-info-600 dark:text-info-400 shrink-0" />
-                        <span class="text-xs font-semibold text-info-800 dark:text-info-200">
-                            {{ __('filament-copilot::filament-copilot.user_approval_required') }}
-                        </span>
-                    </div>
-                    <div class="px-3 py-2.5">
-                        <p class="text-sm text-info-900 dark:text-info-100 break-words">
-                            {{ $pendingQuestion['question'] ?? '' }}
-                        </p>
-                        @if (!empty($pendingQuestion['context']))
-                            <p class="text-xs text-info-600 dark:text-info-400 mt-1.5 italic break-words">
-                                {{ $pendingQuestion['context'] }}
-                            </p>
-                        @endif
-                    </div>
-                    <div
-                        class="flex items-center justify-end gap-2 px-3 py-2 border-t border-info-200 dark:border-info-800 bg-info-50/50 dark:bg-info-900/5 flex-wrap">
-                        @if (!empty($pendingQuestion['options']))
-                            {{-- Render each option as a separate button --}}
-                            @foreach ($pendingQuestion['options'] as $option)
-                                <x-filament::button
-                                    wire:click="respondToQuestion('{{ str_replace("'", "\\'", $option) }}')"
-                                    wire:loading.attr="disabled" color="primary" size="xs">
-                                    <span wire:loading.remove
-                                        wire:target="respondToQuestion">{{ $option }}</span>
-                                    <span wire:loading wire:target="respondToQuestion"
-                                        class="flex items-center gap-1">
-                                        <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                            fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                            </path>
-                                        </svg>
-                                    </span>
-                                </x-filament::button>
-                            @endforeach
-                        @else
-                            {{-- Fallback: Cancel / Approve --}}
-                            <x-filament::button wire:click="respondToQuestion('cancel')" wire:loading.attr="disabled"
-                                color="gray" size="xs">
-                                <span wire:loading.remove
-                                    wire:target="respondToQuestion">{{ __('filament-copilot::filament-copilot.cancel') }}</span>
-                                <span wire:loading wire:target="respondToQuestion" class="flex items-center gap-1">
-                                    <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                        fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10"
-                                            stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                        </path>
-                                    </svg>
-                                </span>
-                            </x-filament::button>
-                            <x-filament::button wire:click="respondToQuestion('approve')" wire:loading.attr="disabled"
-                                color="primary" size="xs">
-                                <span wire:loading.remove
-                                    wire:target="respondToQuestion">{{ __('filament-copilot::filament-copilot.approve') }}</span>
-                                <span wire:loading wire:target="respondToQuestion" class="flex items-center gap-1">
-                                    <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                        fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10"
-                                            stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                        </path>
-                                    </svg>
-                                </span>
-                            </x-filament::button>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        {{-- Tool Confirmation Dialog --}}
-        @if ($pendingConfirmation)
-            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                <div
-                    class="rounded-xl border border-warning-200 dark:border-warning-800 bg-warning-50 dark:bg-warning-900/10 overflow-hidden">
-                    <div
-                        class="flex items-center gap-2 px-3 py-2 bg-warning-100 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800">
-                        <x-filament::icon icon="heroicon-o-shield-check"
-                            class="w-4 h-4 text-warning-600 dark:text-warning-400 shrink-0" />
-                        <span class="text-xs font-semibold text-warning-800 dark:text-warning-200">
-                            {{ __('filament-copilot::filament-copilot.user_approval_required') }}
-                        </span>
-                    </div>
-                    <div class="px-3 py-2.5">
-                        <p class="text-sm font-medium text-warning-900 dark:text-warning-100 break-words">
-                            {{ $pendingConfirmation['tool_name'] ?? 'Tool' }}
-                        </p>
-                        <p class="text-xs text-warning-700 dark:text-warning-300 mt-1 break-words">
-                            {{ $pendingConfirmation['description'] ?? '' }}
-                        </p>
-                    </div>
-                    <div
-                        class="flex items-center justify-end gap-2 px-3 py-2 border-t border-warning-200 dark:border-warning-800 bg-warning-50/50 dark:bg-warning-900/5">
-                        <x-filament::button wire:click="rejectConfirmation" wire:loading.attr="disabled"
-                            color="gray" size="xs">
-                            <span wire:loading.remove
-                                wire:target="rejectConfirmation">{{ __('filament-copilot::filament-copilot.cancel') }}</span>
-                            <span wire:loading wire:target="rejectConfirmation" class="flex items-center gap-1">
-                                <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                            </span>
-                        </x-filament::button>
-                        <x-filament::button wire:click="approveConfirmation" wire:loading.attr="disabled"
-                            color="primary" size="xs">
-                            <span wire:loading.remove
-                                wire:target="approveConfirmation">{{ __('filament-copilot::filament-copilot.approve') }}</span>
-                            <span wire:loading wire:target="approveConfirmation" class="flex items-center gap-1">
-                                <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                            </span>
-                        </x-filament::button>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        {{-- Plan Approval --}}
-        @if ($pendingPlan)
-            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                <div class="rounded-xl border border-warning-200 dark:border-warning-800 bg-warning-50 dark:bg-warning-900/10 overflow-hidden"
-                    x-data="{ planOpen: true }">
-                    <button @click="planOpen = !planOpen" type="button"
-                        class="flex items-center gap-2 px-3 py-2 w-full bg-warning-100 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800 hover:bg-warning-200 dark:hover:bg-warning-900/30 transition-colors">
-                        <svg class="w-3.5 h-3.5 text-warning-600 transition-transform duration-200"
-                            :class="{ 'rotate-90': planOpen }" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                        <x-filament::icon icon="heroicon-o-clipboard-document-list"
-                            class="w-4 h-4 text-warning-600 shrink-0" />
-                        <span class="text-xs font-semibold text-warning-800 dark:text-warning-200">
-                            @if (!empty($pendingPlan['executing']))
-                                {{ __('filament-copilot::filament-copilot.plan_executing') }}
-                                <span
-                                    class="font-normal">({{ $pendingPlan['current_step'] ?? 0 }}/{{ $pendingPlan['total_steps'] ?? count($pendingPlan['steps'] ?? []) }})</span>
-                            @else
-                                {{ __('filament-copilot::filament-copilot.plan_proposed') }}
-                            @endif
-                        </span>
-                    </button>
-                    <div x-show="planOpen" x-collapse>
-                        <div class="px-3 py-2.5 max-h-40 overflow-y-auto">
-                            @if (!empty($pendingPlan['description']))
-                                <p class="text-xs text-warning-700 dark:text-warning-300 mb-2 break-words">
-                                    {{ $pendingPlan['description'] }}</p>
-                            @endif
-                            @if (!empty($pendingPlan['steps']))
-                                <ol class="space-y-1">
-                                    @foreach ($pendingPlan['steps'] as $i => $step)
-                                        @php
-                                            $stepClass = 'text-warning-800 dark:text-warning-300';
-                                            if (
-                                                !empty($pendingPlan['executing']) &&
-                                                $i < ($pendingPlan['current_step'] ?? 0)
-                                            ) {
-                                                $stepClass = 'text-success-600 dark:text-success-400 line-through';
-                                            } elseif (
-                                                !empty($pendingPlan['executing']) &&
-                                                $i === ($pendingPlan['current_step'] ?? 0)
-                                            ) {
-                                                $stepClass = 'text-warning-800 dark:text-warning-200 font-medium';
-                                            }
-                                        @endphp
-                                        <li class="text-xs flex items-start gap-1.5 {{ $stepClass }}">
-                                            @if (!empty($pendingPlan['executing']) && $i < ($pendingPlan['current_step'] ?? 0))
-                                                <x-filament::icon icon="heroicon-o-check-circle"
-                                                    class="w-3.5 h-3.5 text-success-500 shrink-0 mt-0.5" />
-                                            @elseif (!empty($pendingPlan['executing']) && $i === ($pendingPlan['current_step'] ?? 0))
-                                                <span
-                                                    class="w-3.5 h-3.5 flex items-center justify-center shrink-0 mt-0.5"><span
-                                                        class="w-2 h-2 bg-warning-500 rounded-full animate-pulse"></span></span>
-                                            @else
-                                                <span
-                                                    class="w-3.5 h-3.5 flex items-center justify-center text-warning-400 shrink-0 mt-0.5">{{ $i + 1 }}.</span>
-                                            @endif
-                                            <span class="break-words">{{ $step['description'] ?? $step }}</span>
-                                        </li>
-                                    @endforeach
-                                </ol>
-                            @endif
-                        </div>
-                        @if (empty($pendingPlan['executing']))
-                            <div
-                                class="flex items-center justify-end gap-2 px-3 py-2 border-t border-warning-200 dark:border-warning-800 bg-warning-50/50 dark:bg-warning-900/5">
-                                <x-filament::button wire:click="rejectPlan('{{ $pendingPlan['id'] }}')"
-                                    wire:loading.attr="disabled" color="danger" size="xs">
-                                    <span wire:loading.remove
-                                        wire:target="rejectPlan">{{ __('filament-copilot::filament-copilot.reject') }}</span>
-                                    <span wire:loading wire:target="rejectPlan" class="flex items-center gap-1">
-                                        <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                            fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                            </path>
-                                        </svg>
-                                    </span>
-                                </x-filament::button>
-                                <x-filament::button wire:click="approvePlan('{{ $pendingPlan['id'] }}')"
-                                    wire:loading.attr="disabled" color="success" size="xs">
-                                    <span wire:loading.remove
-                                        wire:target="approvePlan">{{ __('filament-copilot::filament-copilot.approve') }}</span>
-                                    <span wire:loading wire:target="approvePlan" class="flex items-center gap-1">
-                                        <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                            fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                            </path>
-                                        </svg>
-                                    </span>
-                                </x-filament::button>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        @endif
 
         {{-- Input (sticky footer, matches Filament slide-over) --}}
         <div

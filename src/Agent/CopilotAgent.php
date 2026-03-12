@@ -7,6 +7,8 @@ namespace EslamRedaDiv\FilamentCopilot\Agent;
 use EslamRedaDiv\FilamentCopilot\Agent\Middleware\AuditMiddleware;
 use EslamRedaDiv\FilamentCopilot\Agent\Middleware\RateLimitMiddleware;
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Ai\Attributes\MaxTokens;
+use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasMiddleware;
@@ -14,6 +16,8 @@ use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 use Stringable;
 
+#[Temperature(0.3)]
+#[MaxTokens(4096)]
 class CopilotAgent implements Agent, Conversational, HasMiddleware, HasTools
 {
     use Promptable;
@@ -29,10 +33,6 @@ class CopilotAgent implements Agent, Conversational, HasMiddleware, HasTools
     protected iterable $conversationMessages = [];
 
     protected ?string $systemPrompt = null;
-
-    protected bool $shouldThink = false;
-
-    protected bool $shouldPlan = false;
 
     public function __construct(
         protected ContextBuilder $contextBuilder,
@@ -80,20 +80,6 @@ class CopilotAgent implements Agent, Conversational, HasMiddleware, HasTools
         return $this;
     }
 
-    public function thinking(bool $shouldThink = true): static
-    {
-        $this->shouldThink = $shouldThink;
-
-        return $this;
-    }
-
-    public function planning(bool $shouldPlan = true): static
-    {
-        $this->shouldPlan = $shouldPlan;
-
-        return $this;
-    }
-
     public function instructions(): Stringable|string
     {
         return $this->contextBuilder
@@ -101,7 +87,6 @@ class CopilotAgent implements Agent, Conversational, HasMiddleware, HasTools
             ->forTenant($this->tenant)
             ->forUser($this->user)
             ->withCustomPrompt($this->systemPrompt)
-            ->withPlanning($this->shouldPlan)
             ->build();
     }
 

@@ -97,13 +97,10 @@ class ConversationManager
     /**
      * Get messages for a conversation in the format expected by the AI SDK.
      */
-    public function getMessagesForAgent(CopilotConversation $conversation, ?int $limit = null): array
+    public function getMessagesForAgent(CopilotConversation $conversation): array
     {
-        $limit ??= config('filament-copilot.chat.max_conversation_messages', 50);
-
         return $conversation->messages()
             ->orderByDesc('created_at')
-            ->limit($limit)
             ->get()
             ->reverse()
             ->map(fn (CopilotMessage $message) => [

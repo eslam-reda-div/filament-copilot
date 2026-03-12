@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Http\Controllers;
 
 use EslamRedaDiv\FilamentCopilot\Agent\CopilotAgent;
-use EslamRedaDiv\FilamentCopilot\Agent\PlanningEngine;
 use EslamRedaDiv\FilamentCopilot\Events\CopilotMessageSent;
 use EslamRedaDiv\FilamentCopilot\Events\CopilotResponseReceived;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\RateLimitService;
@@ -86,22 +86,18 @@ class StreamController
 
                 $messages = $conversationManager->getMessagesForAgent($conversation);
 
+                /** @var FilamentCopilotPlugin $plugin */
+                $plugin = FilamentCopilotPlugin::get();
+
                 $agent->forPanel($panelId)
                     ->forUser($user)
                     ->forTenant($tenant)
                     ->withTools($toolRegistry->buildTools($panelId, $user, $tenant, $conversation->id))
-                    ->withMessages($messages);
+                    ->withMessages($messages)
+                    ->withSystemPrompt($plugin->getSystemPrompt());
 
-                if (config('filament-copilot.agent.should_think', false)) {
-                    $agent->thinking();
-                }
-
-                if (config('filament-copilot.agent.should_plan', false)) {
-                    $agent->planning();
-                }
-
-                $provider = config('filament-copilot.provider', 'openai');
-                $model = config('filament-copilot.model');
+                $provider = $plugin->getProvider();
+                $model = $plugin->getModel();
 
                 $lastUserMessage = '';
                 foreach ($messages as $msg) {
@@ -127,18 +123,6 @@ class StreamController
                     if ($event instanceof \Laravel\Ai\Streaming\Events\TextDelta) {
                         $responseText .= $event->delta;
                         $this->sendSseEvent('chunk', ['text' => $event->delta]);
-                    } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ReasoningStart) {
-                        $this->sendSseEvent('thinking_start', ['reasoning_id' => $event->reasoningId]);
-                    } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ReasoningDelta) {
-                        $this->sendSseEvent('thinking_delta', [
-                            'delta' => $event->delta,
-                            'reasoning_id' => $event->reasoningId,
-                        ]);
-                    } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ReasoningEnd) {
-                        $this->sendSseEvent('thinking_end', [
-                            'reasoning_id' => $event->reasoningId,
-                            'summary' => $event->summary,
-                        ]);
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ToolCall) {
                         $this->sendSseEvent('tool_call', [
                             'tool_id' => $event->toolCall->id,
@@ -155,33 +139,6 @@ class StreamController
                             'success' => $event->successful,
                             'error' => $event->error,
                         ]);
-
-                        // Detect special tool result types and emit dedicated SSE events
-                        $decoded = json_decode($rawResult, true);
-                        if (is_array($decoded)) {
-                            $type = $decoded['type'] ?? null;
-
-                            if ($type === 'confirmation_required') {
-                                $this->sendSseEvent('confirmation_required', [
-                                    'confirmation_key' => $decoded['confirmation_key'] ?? '',
-                                    'tool_name' => $decoded['tool_name'] ?? '',
-                                    'tool_class' => $decoded['tool_class'] ?? '',
-                                    'source_class' => $decoded['source_class'] ?? '',
-                                    'description' => $decoded['description'] ?? '',
-                                ]);
-                            } elseif ($type === 'ask_user') {
-                                $this->sendSseEvent('ask_user', [
-                                    'question' => $decoded['question'] ?? '',
-                                    'options' => $decoded['options'] ?? [],
-                                    'context' => $decoded['context'] ?? null,
-                                ]);
-                            }
-
-                            // Detect navigation tool results
-                            if (($decoded['__navigate'] ?? false) && ! empty($decoded['url'])) {
-                                $this->sendSseEvent('navigate', ['url' => $decoded['url']]);
-                            }
-                        }
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\StreamEnd) {
                         $usage = $event->usage;
                     }
@@ -225,20 +182,6 @@ class StreamController
                     'input_tokens' => $usage->promptTokens ?? 0,
                     'output_tokens' => $usage->completionTokens ?? 0,
                 ]);
-
-                // Send plan status if there's an active plan
-                $planningEngine = app(PlanningEngine::class);
-                $activePlan = $planningEngine->getActivePlan($conversation);
-
-                if ($activePlan) {
-                    $this->sendSseEvent('plan_status', [
-                        'id' => $activePlan->id,
-                        'status' => $activePlan->status->value,
-                        'current_step' => $activePlan->current_step,
-                        'total_steps' => $activePlan->total_steps,
-                        'steps' => $activePlan->steps,
-                    ]);
-                }
 
                 $this->sendSseEvent('done', []);
             } catch (\Throwable $e) {

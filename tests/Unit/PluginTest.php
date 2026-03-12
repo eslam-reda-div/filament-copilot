@@ -12,12 +12,6 @@ it('creates plugin instance', function () {
         ->and($plugin->getId())->toBe('filament-copilot');
 });
 
-it('configures chat enabled', function () {
-    $plugin = FilamentCopilotPlugin::make()->chatEnabled(false);
-
-    expect($plugin->isChatEnabled())->toBeFalse();
-});
-
 it('configures management', function () {
     $plugin = FilamentCopilotPlugin::make()
         ->managementEnabled()
@@ -34,17 +28,6 @@ it('configures provider and model', function () {
 
     expect($plugin->getProvider())->toBe('anthropic')
         ->and($plugin->getModel())->toBe('claude-sonnet-4-20250514');
-});
-
-it('configures thinking and planning', function () {
-    $plugin = FilamentCopilotPlugin::make()
-        ->thinking()
-        ->planning()
-        ->shouldApprovePlan();
-
-    expect($plugin->shouldThink())->toBeTrue()
-        ->and($plugin->shouldPlan())->toBeTrue()
-        ->and($plugin->requiresPlanApproval())->toBeTrue();
 });
 
 it('configures quick actions', function () {
@@ -86,30 +69,6 @@ it('configures authorize callback', function () {
     $plugin = FilamentCopilotPlugin::make()->authorizeUsing(fn () => true);
 
     expect($plugin->getAuthorizeUsing())->toBeCallable();
-});
-
-it('configures chat history enabled', function () {
-    $plugin = FilamentCopilotPlugin::make()->chatHistoryEnabled(false);
-
-    expect($plugin->isChatHistoryEnabled())->toBeFalse();
-});
-
-it('configures streaming', function () {
-    $plugin = FilamentCopilotPlugin::make()
-        ->streaming(false)
-        ->streamingChunkSize(50);
-
-    expect($plugin->isStreamingEnabled())->toBeFalse()
-        ->and($plugin->getStreamingChunkSize())->toBe(50);
-});
-
-it('configures export', function () {
-    $plugin = FilamentCopilotPlugin::make()
-        ->exportEnabled()
-        ->exportFormats(['markdown', 'pdf']);
-
-    expect($plugin->isExportEnabled())->toBeTrue()
-        ->and($plugin->getExportFormats())->toBe(['markdown', 'pdf']);
 });
 
 it('configures token budget', function () {

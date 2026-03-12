@@ -50,14 +50,6 @@ abstract class BaseTool implements Tool
         return $this;
     }
 
-    /**
-     * Whether the agent must ask the user before executing this tool.
-     */
-    public function needToAsk(): bool
-    {
-        return false;
-    }
-
     protected function dispatchToolExecuted(string $toolName, string $result, ?string $messageId = null, ?array $input = null): void
     {
         $toolCall = new CopilotToolCall([

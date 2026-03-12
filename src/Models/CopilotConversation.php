@@ -45,11 +45,6 @@ class CopilotConversation extends Model
         return $this->hasMany(CopilotMessage::class, 'conversation_id');
     }
 
-    public function plans(): HasMany
-    {
-        return $this->hasMany(CopilotPlan::class, 'conversation_id');
-    }
-
     public function auditLogs(): HasMany
     {
         return $this->hasMany(CopilotAuditLog::class, 'conversation_id');

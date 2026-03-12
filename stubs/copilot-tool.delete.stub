@@ -12,11 +12,6 @@ use Stringable;
 
 class {{ className }} extends BaseTool
 {
-    public function needToAsk(): bool
-    {
-        return true;
-    }
-
     public function description(): Stringable|string
     {
         return 'Delete a {{ modelLabel }}.';

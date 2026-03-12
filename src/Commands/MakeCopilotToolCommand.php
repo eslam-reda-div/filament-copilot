@@ -103,19 +103,19 @@ class MakeCopilotToolCommand extends Command
         if ($type === 'resource') {
             foreach ($panel->getResources() as $resourceClass) {
                 if (is_subclass_of($resourceClass, CopilotResource::class)) {
-                    $options[$resourceClass] = class_basename($resourceClass);
+                    $options[(string) $resourceClass] = class_basename($resourceClass);
                 }
             }
         } elseif ($type === 'page') {
             foreach ($panel->getPages() as $pageClass) {
                 if (is_subclass_of($pageClass, CopilotPage::class)) {
-                    $options[$pageClass] = class_basename($pageClass);
+                    $options[(string) $pageClass] = class_basename($pageClass);
                 }
             }
         } elseif ($type === 'widget') {
             foreach ($panel->getWidgets() as $widgetClass) {
                 if (is_subclass_of($widgetClass, CopilotWidget::class)) {
-                    $options[$widgetClass] = class_basename($widgetClass);
+                    $options[(string) $widgetClass] = class_basename($widgetClass);
                 }
             }
         }

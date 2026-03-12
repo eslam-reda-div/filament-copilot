@@ -33,14 +33,10 @@ return [
     'rate_limit_exceeded' => 'You have exceeded the rate limit. Please try again later.',
     'error_occurred' => 'An error occurred',
 
-    // Plans
-    'plan_proposed' => 'A plan has been proposed:',
-    'plan_executing' => 'Plan is executing...',
-    'approve' => 'Approve',
-    'reject' => 'Reject',
-
     // Ask User
     'question_from_copilot' => 'Copilot needs your input:',
+    'approve' => 'Approve',
+    'reject' => 'Reject',
     'respond' => 'Respond',
     'user_approval_required' => 'Your approval is required before this action can proceed.',
 

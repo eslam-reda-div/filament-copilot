@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Livewire;
 
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use Livewire\Component;
 
 class CopilotButton extends Component
@@ -12,7 +13,12 @@ class CopilotButton extends Component
 
     public function mount(): void
     {
-        $this->quickActions = config('filament-copilot.quick_actions', []);
+        try {
+            $plugin = FilamentCopilotPlugin::get();
+            $this->quickActions = $plugin->getQuickActions();
+        } catch (\Throwable) {
+            $this->quickActions = config('filament-copilot.quick_actions', []);
+        }
     }
 
     public function openCopilot(): void

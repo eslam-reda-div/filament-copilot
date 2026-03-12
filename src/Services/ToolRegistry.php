@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Services;
 
-use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
-use EslamRedaDiv\FilamentCopilot\Tools\CreatePlanTool;
-use EslamRedaDiv\FilamentCopilot\Tools\ExportConversationTool;
 use EslamRedaDiv\FilamentCopilot\Tools\GetToolsTool;
 use EslamRedaDiv\FilamentCopilot\Tools\ListPagesTool;
 use EslamRedaDiv\FilamentCopilot\Tools\ListResourcesTool;
@@ -15,6 +12,7 @@ use EslamRedaDiv\FilamentCopilot\Tools\ListWidgetsTool;
 use EslamRedaDiv\FilamentCopilot\Tools\RecallTool;
 use EslamRedaDiv\FilamentCopilot\Tools\RememberTool;
 use EslamRedaDiv\FilamentCopilot\Tools\RunToolTool;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 
 class ToolRegistry
@@ -31,10 +29,6 @@ class ToolRegistry
         // Memory
         RememberTool::class,
         RecallTool::class,
-        // Utility
-        AskUserTool::class,
-        CreatePlanTool::class,
-        ExportConversationTool::class,
     ];
 
     /**
@@ -50,9 +44,18 @@ class ToolRegistry
      */
     public function buildTools(string $panelId, Model $user, ?Model $tenant = null, ?string $conversationId = null): array
     {
+        // Merge plugin-configured global tools
+        $pluginTools = [];
+        try {
+            $plugin = \EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin::get();
+            $pluginTools = $plugin->getGlobalTools();
+        } catch (\Throwable) {
+            $pluginTools = config('filament-copilot.global_tools', []);
+        }
+
         $tools = [];
 
-        foreach (array_merge($this->toolClasses, $this->globalTools) as $toolClass) {
+        foreach (array_merge($this->toolClasses, $this->globalTools, $pluginTools) as $toolClass) {
             $tool = app($toolClass);
 
             if ($tool instanceof BaseTool) {

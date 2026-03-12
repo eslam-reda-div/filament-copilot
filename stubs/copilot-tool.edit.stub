@@ -12,14 +12,6 @@ use Stringable;
 
 class {{ className }} extends BaseTool
 {
-    /**
-     * Set to true if the agent must ask the user before editing.
-     */
-    public function needToAsk(): bool
-    {
-        return true;
-    }
-
     public function description(): Stringable|string
     {
         return 'Update an existing {{ modelLabel }}.';

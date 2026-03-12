@@ -3,7 +3,6 @@
     $isSystem = ($msg['role'] ?? '') === 'system';
     $isAssistant = ($msg['role'] ?? '') === 'assistant';
     $isTool = ($msg['role'] ?? '') === 'tool';
-    $isThinking = ($msg['role'] ?? '') === 'thinking';
     $isToolCall = ($msg['role'] ?? '') === 'tool_call';
     $isToolResult = ($msg['role'] ?? '') === 'tool_result';
 @endphp
@@ -11,35 +10,10 @@
 @if ($isUser)
     <div class="flex items-start gap-2.5 justify-end">
         <div class="min-w-0 max-w-[85%] rounded-2xl rounded-tr-md px-3.5 py-2.5 bg-primary-600 text-white">
-            <p class="text-sm whitespace-pre-wrap break-words leading-relaxed">{{ $msg['content'] }}</p>
+            <p class="text-sm whitespace-pre-wrap wrap-break-word leading-relaxed">{{ $msg['content'] }}</p>
         </div>
         <div class="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 mt-0.5">
             <x-filament::icon icon="heroicon-o-user" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
-        </div>
-    </div>
-@elseif($isThinking)
-    {{-- Collapsible thinking box (DeepSeek/ChatGPT style) --}}
-    <div class="flex items-start gap-2.5">
-        <div
-            class="w-7 h-7 rounded-full bg-info-100 dark:bg-info-900/30 flex items-center justify-center shrink-0 mt-0.5">
-            <x-filament::icon icon="heroicon-o-light-bulb" class="w-4 h-4 text-info-600 dark:text-info-400" />
-        </div>
-        <div class="min-w-0 max-w-[85%] w-full" x-data="{ open: false }">
-            <button @click="open = !open" type="button"
-                class="flex items-center gap-2 px-3 py-2 w-full rounded-t-xl bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 hover:bg-info-100 dark:hover:bg-info-900/30 transition-colors"
-                :class="{ 'rounded-b-xl': !open }">
-                <svg class="w-3.5 h-3.5 text-info-500 transition-transform duration-200" :class="{ 'rotate-90': open }"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-                <span class="text-xs font-medium text-info-700 dark:text-info-300">Thinking</span>
-            </button>
-            <div x-show="open" x-collapse
-                class="px-3 py-2 bg-info-50/50 dark:bg-info-900/10 border border-t-0 border-info-200 dark:border-info-800 rounded-b-xl">
-                <p
-                    class="text-xs text-info-700 dark:text-info-300 whitespace-pre-wrap break-words font-mono leading-relaxed max-h-40 overflow-y-auto">
-                    {{ $msg['content'] }}</p>
-            </div>
         </div>
     </div>
 @elseif($isToolCall || $isToolResult || $isTool)
@@ -105,7 +79,7 @@
         <div
             class="min-w-0 max-w-[85%] rounded-2xl rounded-tl-md px-3.5 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <div
-                class="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                class="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none wrap-break-word [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                 {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
             </div>
         </div>
@@ -115,7 +89,7 @@
         <div
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-warning-50 dark:bg-warning-900/20 text-warning-700 dark:text-warning-300 max-w-full">
             <x-filament::icon icon="heroicon-o-exclamation-triangle" class="w-3.5 h-3.5 shrink-0" />
-            <span class="text-xs break-words">{{ $msg['content'] }}</span>
+            <span class="text-xs wrap-anywherebreak-word">{{ $msg['content'] }}</span>
         </div>
     </div>
 @endif

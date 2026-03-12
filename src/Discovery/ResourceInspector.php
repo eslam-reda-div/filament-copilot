@@ -29,6 +29,7 @@ class ResourceInspector
                 continue;
             }
 
+            /** @var class-string<\Filament\Resources\Resource&CopilotResource> $resourceClass */
             $hasTools = false;
             try {
                 $hasTools = ! empty($resourceClass::copilotTools());

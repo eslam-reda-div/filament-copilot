@@ -13,11 +13,6 @@ use Stringable;
 
 class {{ className }} extends BaseTool
 {
-    public function needToAsk(): bool
-    {
-        return true;
-    }
-
     public function description(): Stringable|string
     {
         return 'Permanently delete a {{ modelLabel }}. This cannot be undone.';

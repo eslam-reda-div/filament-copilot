@@ -12,8 +12,4 @@ it('StreamController has stream method', function () {
     expect(method_exists($controller, 'stream'))->toBeTrue();
 });
 
-it('streaming config exists', function () {
-    expect(config('filament-copilot.streaming'))->toBeArray()
-        ->and(config('filament-copilot.streaming.enabled'))->toBeTrue()
-        ->and(config('filament-copilot.streaming.chunk_size'))->toBe(20);
-});
+

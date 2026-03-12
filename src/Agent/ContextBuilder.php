@@ -20,8 +20,6 @@ class ContextBuilder
 
     protected ?string $customPrompt = null;
 
-    protected bool $withPlanning = false;
-
     public function __construct(
         protected ResourceInspector $resourceInspector,
         protected PageInspector $pageInspector,
@@ -56,13 +54,6 @@ class ContextBuilder
         return $this;
     }
 
-    public function withPlanning(bool $planning = true): static
-    {
-        $this->withPlanning = $planning;
-
-        return $this;
-    }
-
     public function build(): string
     {
         $sections = [];
@@ -72,10 +63,6 @@ class ContextBuilder
         $sections[] = $this->buildPageContext();
         $sections[] = $this->buildWidgetContext();
         $sections[] = $this->buildMemoryContext();
-
-        if ($this->withPlanning) {
-            $sections[] = $this->buildPlanningInstructions();
-        }
 
         if ($this->customPrompt) {
             $sections[] = "## Additional Instructions\n{$this->customPrompt}";
@@ -162,15 +149,4 @@ PROMPT;
         return implode("\n", $lines);
     }
 
-    protected function buildPlanningInstructions(): string
-    {
-        return <<<'PROMPT'
-## Planning Mode
-When the user asks you to perform a complex multi-step task:
-1. First, create a plan outlining each step you will take.
-2. Present the plan to the user for approval before executing.
-3. Execute each step sequentially, reporting progress.
-4. If a step fails, report the issue and ask how to proceed.
-PROMPT;
-    }
 }

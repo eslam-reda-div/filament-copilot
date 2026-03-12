@@ -244,9 +244,7 @@ class InstallCommand extends Command
         $this->line('  <fg=cyan>{</>');
         $this->line('  <fg=cyan>    return $panel</>');
         $this->line('  <fg=cyan>        ->plugins([</>');
-        $this->line('  <fg=cyan>            FilamentCopilotPlugin::make()</>');
-        $this->line('  <fg=cyan>                ->planning()</>');
-        $this->line('  <fg=cyan>                ->shouldApprovePlan(),</>');
+        $this->line('  <fg=cyan>            FilamentCopilotPlugin::make(),</>');
         $this->line('  <fg=cyan>        ]);</>');
         $this->line('  <fg=cyan>}</>');
         $this->newLine();
@@ -305,22 +303,34 @@ class InstallCommand extends Command
     {
         $envPath = base_path('.env');
 
-        if (!file_exists($envPath)) {
+        if (! file_exists($envPath)) {
             return;
         }
 
         $envContent = file_get_contents($envPath);
+        $quotedValue = $this->quoteEnvValue($value);
+        $line = "{$key}={$quotedValue}";
 
         if (preg_match("/^{$key}=/m", $envContent)) {
-            $envContent = preg_replace(
+            $envContent = preg_replace_callback(
                 "/^{$key}=.*/m",
-                "{$key}={$value}",
-                $envContent
+                fn () => $line,
+                $envContent,
+                1
             );
         } else {
-            $envContent .= PHP_EOL."{$key}={$value}";
+            $envContent .= PHP_EOL . $line;
         }
 
         file_put_contents($envPath, $envContent);
+    }
+
+    private function quoteEnvValue(string $value): string
+    {
+        if ($value === '' || preg_match('/[\s#"\\\\$]/', $value)) {
+            return '"' . addcslashes($value, '"\\$') . '"';
+        }
+
+        return $value;
     }
 }

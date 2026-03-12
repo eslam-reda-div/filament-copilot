@@ -29,6 +29,7 @@ class PageInspector
                 continue;
             }
 
+            /** @var class-string<\Filament\Pages\Page&CopilotPage> $pageClass */
             $hasTools = false;
             try {
                 $description = $pageClass::copilotPageDescription();
@@ -37,6 +38,7 @@ class PageInspector
                 $description = null;
             }
 
+            /** @var class-string<\Filament\Pages\Page> $pageClass */
             $pages[] = [
                 'page' => $pageClass,
                 'label' => $pageClass::getNavigationLabel(),

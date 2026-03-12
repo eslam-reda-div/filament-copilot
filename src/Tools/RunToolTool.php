@@ -9,7 +9,6 @@ use EslamRedaDiv\FilamentCopilot\Contracts\CopilotResource;
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotWidget;
 use EslamRedaDiv\FilamentCopilot\Enums\AuditAction;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\Cache;
 use Laravel\Ai\Tools\Request;
 use Stringable;
 
@@ -67,33 +66,6 @@ class RunToolTool extends BaseTool
             return "Tool '{$toolClass}' is not registered in '" . class_basename($sourceClass) . "'. Use get_tools to see available tools.";
         }
 
-        // Check if tool requires confirmation via server-side cache
-        if ($targetTool instanceof BaseTool && $targetTool->needToAsk()) {
-            $cacheKey = $this->buildConfirmationCacheKey($toolClass);
-
-            $cachedStatus = Cache::get($cacheKey);
-
-            if ($cachedStatus === 'approved') {
-                // User approved — consume the approval and continue to execution
-                Cache::forget($cacheKey);
-            } elseif ($cachedStatus === 'pending') {
-                // Already waiting for user confirmation
-                return 'This tool is waiting for user confirmation. Do NOT proceed until the user clicks Approve or Cancel in the dialog.';
-            } else {
-                // First call — set pending and request confirmation
-                Cache::put($cacheKey, 'pending', now()->addMinutes(30));
-
-                return json_encode([
-                    'type' => 'confirmation_required',
-                    'confirmation_key' => $cacheKey,
-                    'tool_name' => class_basename($toolClass),
-                    'tool_class' => $toolClass,
-                    'source_class' => $sourceClass,
-                    'description' => (string) $targetTool->description(),
-                ], JSON_UNESCAPED_UNICODE);
-            }
-        }
-
         // Set context on the tool if it's a BaseTool
         if ($targetTool instanceof BaseTool) {
             if (isset($this->panelId)) {
@@ -122,15 +94,5 @@ class RunToolTool extends BaseTool
         ]);
 
         return $result;
-    }
-
-    /**
-     * Build a cache key for tool confirmation based on conversation and tool class.
-     */
-    protected function buildConfirmationCacheKey(string $toolClass): string
-    {
-        $conversationId = $this->conversationId ?? 'global';
-
-        return 'copilot:confirm:' . $conversationId . ':' . md5($toolClass);
     }
 }

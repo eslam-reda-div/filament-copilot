@@ -10,16 +10,11 @@ it('has default provider set', function () {
 
 it('has agent configuration', function () {
     expect(config('filament-copilot.agent'))->toBeArray()
-        ->and(config('filament-copilot.agent.should_think'))->toBeFalse()
-        ->and(config('filament-copilot.agent.should_plan'))->toBeFalse()
-        ->and(config('filament-copilot.agent.max_steps'))->toBe(10)
-        ->and(config('filament-copilot.agent.temperature'))->toBe(0.3)
-        ->and(config('filament-copilot.agent.max_tokens'))->toBe(4096);
+        ->and(config('filament-copilot.agent.timeout'))->toBe(120);
 });
 
 it('has chat configuration', function () {
-    expect(config('filament-copilot.chat.enabled'))->toBeTrue()
-        ->and(config('filament-copilot.chat.max_conversation_messages'))->toBe(50);
+    expect(config('filament-copilot.chat'))->toBeArray();
 });
 
 it('has rate limit configuration', function () {
@@ -43,7 +38,4 @@ it('respects authorization by default', function () {
     expect(config('filament-copilot.respect_authorization'))->toBeTrue();
 });
 
-it('has export configuration', function () {
-    expect(config('filament-copilot.export.enabled'))->toBeTrue()
-        ->and(config('filament-copilot.export.formats'))->toContain('markdown');
-});
+

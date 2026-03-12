@@ -25,12 +25,6 @@ return [
     */
 
     'agent' => [
-        'should_think' => false,
-        'should_plan' => false,
-        'should_approve_plan' => false,
-        'max_steps' => 10,
-        'temperature' => 0.3,
-        'max_tokens' => 4096,
         'timeout' => 120,
     ],
 
@@ -41,22 +35,7 @@ return [
     */
 
     'chat' => [
-        'enabled' => true,
-        'max_conversation_messages' => 50,
         'title_auto_generate' => true,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | SSE Streaming
-    |--------------------------------------------------------------------------
-    | When enabled, responses stream in real-time via Server-Sent Events
-    | instead of waiting for the full response before displaying it.
-    */
-
-    'streaming' => [
-        'enabled' => true,
-        'chunk_size' => 20,
     ],
 
     /*
@@ -96,7 +75,6 @@ return [
         'enabled' => true,
         'log_messages' => true,
         'log_tool_calls' => true,
-        'log_plan_actions' => true,
         'log_record_access' => true,
         'log_navigation' => false,
     ],
@@ -119,17 +97,6 @@ return [
     */
 
     'respect_authorization' => true,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Chat Export
-    |--------------------------------------------------------------------------
-    */
-
-    'export' => [
-        'enabled' => true,
-        'formats' => ['markdown'],
-    ],
 
     /*
     |--------------------------------------------------------------------------
