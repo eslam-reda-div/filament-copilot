@@ -62,7 +62,11 @@ class RateLimitService
             outputTokens: $outputTokens,
             tenant: $tenant,
             conversation: $conversationId
-                ? CopilotConversation::find($conversationId)
+                ? CopilotConversation::query()
+                    ->forPanel($panelId)
+                    ->forParticipant($user)
+                    ->forTenant($tenant)
+                    ->find($conversationId)
                 : null,
             model: $model,
             provider: $provider,

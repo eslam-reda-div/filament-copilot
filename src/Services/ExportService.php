@@ -6,15 +6,21 @@ namespace EslamRedaDiv\FilamentCopilot\Services;
 
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotMessage;
+use Illuminate\Database\Eloquent\Model;
 
 class ExportService
 {
     /**
      * Export a conversation to Markdown.
      */
-    public function toMarkdown(string $conversationId): ?string
+    public function toMarkdown(string $conversationId, Model $user, string $panelId, ?Model $tenant = null): ?string
     {
-        $conversation = CopilotConversation::with('messages')->find($conversationId);
+        $conversation = CopilotConversation::query()
+            ->forPanel($panelId)
+            ->forParticipant($user)
+            ->forTenant($tenant)
+            ->with('messages')
+            ->find($conversationId);
 
         if (! $conversation) {
             return null;

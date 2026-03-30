@@ -59,7 +59,11 @@ class StreamController
         $conversationManager = app(ConversationManager::class);
 
         if ($conversationId) {
-            $conversation = CopilotConversation::find($conversationId);
+            $conversation = CopilotConversation::query()
+                ->forPanel($panelId)
+                ->forParticipant($user)
+                ->forTenant($tenant)
+                ->find($conversationId);
 
             if (! $conversation) {
                 return $this->sseResponse(function () {

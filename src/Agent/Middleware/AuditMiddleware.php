@@ -69,7 +69,11 @@ class AuditMiddleware
         ?array $payload = null,
     ): void {
         $conversation = $conversationId
-            ? CopilotConversation::find($conversationId)
+            ? CopilotConversation::query()
+                ->forPanel($panelId)
+                ->forParticipant($user)
+                ->forTenant($tenant)
+                ->find($conversationId)
             : null;
 
         CopilotAuditLog::log(

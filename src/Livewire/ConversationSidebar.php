@@ -73,7 +73,20 @@ class ConversationSidebar extends Component
     {
         /** @var ConversationManager $conversationManager */
         $conversationManager = app(ConversationManager::class);
-        $conversation = CopilotConversation::find($conversationId);
+        $user = Filament::auth()->user();
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if (! $user || ! $panelId) {
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        $conversation = CopilotConversation::query()
+            ->forPanel($panelId)
+            ->forParticipant($user)
+            ->forTenant($tenant)
+            ->find($conversationId);
 
         if ($conversation) {
             $conversationManager->delete($conversation);

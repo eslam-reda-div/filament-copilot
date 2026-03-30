@@ -30,7 +30,7 @@ it('exports conversation to markdown', function () {
         'output_tokens' => 20,
     ]);
 
-    $markdown = $service->toMarkdown($conversation->id);
+    $markdown = $service->toMarkdown($conversation->id, $user, 'admin');
 
     expect($markdown)->toContain('Test Conversation')
         ->and($markdown)->toContain('Hello!')

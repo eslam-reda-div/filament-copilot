@@ -150,7 +150,21 @@ class CopilotChat extends Component
     #[On('copilot-load-conversation')]
     public function loadConversation(string $conversationId): void
     {
-        $conversation = CopilotConversation::with('messages')->find($conversationId);
+        $user = Filament::auth()->user();
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if (! $user || ! $panelId) {
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        $conversation = CopilotConversation::query()
+            ->forPanel($panelId)
+            ->forParticipant($user)
+            ->forTenant($tenant)
+            ->with('messages')
+            ->find($conversationId);
 
         if (! $conversation) {
             return;
@@ -170,7 +184,20 @@ class CopilotChat extends Component
     {
         /** @var ConversationManager $conversationManager */
         $conversationManager = app(ConversationManager::class);
-        $conversation = CopilotConversation::find($conversationId);
+        $user = Filament::auth()->user();
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if (! $user || ! $panelId) {
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        $conversation = CopilotConversation::query()
+            ->forPanel($panelId)
+            ->forParticipant($user)
+            ->forTenant($tenant)
+            ->find($conversationId);
 
         if ($conversation) {
             $conversationManager->delete($conversation);
@@ -229,9 +256,28 @@ class CopilotChat extends Component
             return null;
         }
 
+        $user = Filament::auth()->user();
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if (! $user || ! $panelId) {
+            return null;
+        }
+
+        $tenant = Filament::getTenant();
+
+        $conversation = CopilotConversation::query()
+            ->forPanel($panelId)
+            ->forParticipant($user)
+            ->forTenant($tenant)
+            ->find($this->conversationId);
+
+        if (! $conversation) {
+            return null;
+        }
+
         /** @var ExportService $exportService */
         $exportService = app(ExportService::class);
-        $markdown = $exportService->toMarkdown($this->conversationId);
+        $markdown = $exportService->toMarkdown($this->conversationId, $user, $panelId, $tenant);
 
         if (! $markdown) {
             return null;
