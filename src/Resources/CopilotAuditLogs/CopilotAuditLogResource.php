@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Resources\CopilotAuditLogs;
 
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotAuditLog;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotAuditLogs\Pages\ListCopilotAuditLogs;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotAuditLogs\Tables\CopilotAuditLogsTable;
@@ -29,6 +30,21 @@ class CopilotAuditLogResource extends Resource
     public static function getModelLabel(): string
     {
         return __('filament-copilot::filament-copilot.audit_log');
+    }
+
+    public static function canAccess(): bool
+    {
+        $guard = FilamentCopilotPlugin::get()->getManagementGuard();
+
+        if ($guard) {
+            try {
+                return auth()->guard($guard)->check();
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return parent::canAccess();
     }
 
     public static function canCreate(): bool

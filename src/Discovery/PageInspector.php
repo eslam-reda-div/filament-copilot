@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Discovery;
 
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotPage;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use Filament\Facades\Filament;
 
 class PageInspector
@@ -29,6 +30,10 @@ class PageInspector
                 continue;
             }
 
+            if ($this->shouldRespectAuthorization() && ! $this->canAccessPage($pageClass)) {
+                continue;
+            }
+
             /** @var class-string<\Filament\Pages\Page&CopilotPage> $pageClass */
             $hasTools = false;
             try {
@@ -49,6 +54,24 @@ class PageInspector
         }
 
         return $pages;
+    }
+
+    protected function shouldRespectAuthorization(): bool
+    {
+        return FilamentCopilotPlugin::get()->shouldRespectAuthorization();
+    }
+
+    protected function canAccessPage(string $pageClass): bool
+    {
+        if (! method_exists($pageClass, 'canAccess')) {
+            return true;
+        }
+
+        try {
+            return (bool) $pageClass::canAccess();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**

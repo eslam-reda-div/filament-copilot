@@ -11,8 +11,10 @@ use EslamRedaDiv\FilamentCopilot\Resources\CopilotConversations\CopilotConversat
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Blade;
 
 class FilamentCopilotPlugin implements Plugin
@@ -159,6 +161,27 @@ class FilamentCopilotPlugin implements Plugin
         return $this->authorizeUsing;
     }
 
+    public function isAuthorized(?Authenticatable $user = null): bool
+    {
+        $user ??= Filament::auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        $callback = $this->getAuthorizeUsing();
+
+        if (! $callback) {
+            return true;
+        }
+
+        try {
+            return (bool) $callback($user);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function tokenBudgetEnabled(bool $enabled = true): static
     {
         $this->tokenBudgetEnabled = $enabled;
@@ -263,7 +286,7 @@ class FilamentCopilotPlugin implements Plugin
         // Place the trigger button in the top bar next to global search
         FilamentView::registerRenderHook(
             PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-            fn (): string => auth()->check()
+            fn (): string => $this->isAuthorized()
                 ? Blade::render('@livewire(\'filament-copilot-button\')')
                 : '',
         );
@@ -271,7 +294,7 @@ class FilamentCopilotPlugin implements Plugin
         // Place the chat modal at the end of the body
         FilamentView::registerRenderHook(
             PanelsRenderHook::BODY_END,
-            fn (): string => auth()->check()
+            fn (): string => $this->isAuthorized()
                 ? Blade::render('@livewire(\'filament-copilot-chat\')')
                 : '',
         );

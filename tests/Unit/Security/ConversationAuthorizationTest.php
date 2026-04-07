@@ -2,6 +2,7 @@
 
 use EslamRedaDiv\FilamentCopilot\Agent\Middleware\AuditMiddleware;
 use EslamRedaDiv\FilamentCopilot\Enums\AuditAction;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Http\Controllers\StreamController;
 use EslamRedaDiv\FilamentCopilot\Livewire\ConversationSidebar;
 use EslamRedaDiv\FilamentCopilot\Livewire\CopilotChat;
@@ -16,6 +17,8 @@ use Illuminate\Http\Request;
 
 function mockFilamentContext($user, string $panelId = 'admin', $tenant = null): void
 {
+    $plugin = new FilamentCopilotPlugin;
+
     $panel = new class($panelId)
     {
         public function __construct(private string $id) {}
@@ -36,9 +39,18 @@ function mockFilamentContext($user, string $panelId = 'admin', $tenant = null): 
         }
     };
 
-    $filamentManager = new class($guard, $panel, $tenant)
+    $filamentManager = new class($guard, $panel, $tenant, $plugin)
     {
-        public function __construct(private $guard, private $panel, private $tenant) {}
+        public function __construct(private $guard, private $panel, private $tenant, private FilamentCopilotPlugin $plugin) {}
+
+        public function getPlugin(string $pluginId): FilamentCopilotPlugin
+        {
+            if ($pluginId !== $this->plugin->getId()) {
+                throw new RuntimeException('Plugin not found.');
+            }
+
+            return $this->plugin;
+        }
 
         public function setCurrentPanel(string $panelId): void {}
 

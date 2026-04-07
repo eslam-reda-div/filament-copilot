@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Pages;
 
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Widgets\CopilotStatsOverview;
 use EslamRedaDiv\FilamentCopilot\Widgets\TokenUsageChart;
 use EslamRedaDiv\FilamentCopilot\Widgets\TopUsersTable;
@@ -18,6 +19,21 @@ class CopilotDashboardPage extends Page
     protected static ?int $navigationSort = 0;
 
     protected string $view = 'filament-copilot::pages.copilot-dashboard';
+
+    public static function canAccess(): bool
+    {
+        $guard = FilamentCopilotPlugin::get()->getManagementGuard();
+
+        if ($guard) {
+            try {
+                return auth()->guard($guard)->check();
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return parent::canAccess();
+    }
 
     public static function getNavigationLabel(): string
     {

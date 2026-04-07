@@ -41,6 +41,14 @@ class StreamController
         if (! $user) {
             abort(Response::HTTP_UNAUTHORIZED);
         }
+
+        /** @var FilamentCopilotPlugin $plugin */
+        $plugin = FilamentCopilotPlugin::get();
+
+        if (! $plugin->isAuthorized($user)) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
         $tenant = Filament::getTenant();
         $content = $request->input('message');
         $conversationId = $request->input('conversation_id');
@@ -78,7 +86,7 @@ class StreamController
         $conversationManager->addUserMessage($conversation, $content);
         event(new CopilotMessageSent($conversation, $content, $panelId));
 
-        return $this->sseResponse(function () use ($conversation, $conversationManager, $user, $panelId, $tenant, $rateLimitService) {
+        return $this->sseResponse(function () use ($conversation, $conversationManager, $user, $panelId, $tenant, $rateLimitService, $plugin) {
             $this->sendSseEvent('conversation', ['id' => $conversation->id]);
 
             try {
@@ -89,9 +97,6 @@ class StreamController
                 $agent = app(CopilotAgent::class);
 
                 $messages = $conversationManager->getMessagesForAgent($conversation);
-
-                /** @var FilamentCopilotPlugin $plugin */
-                $plugin = FilamentCopilotPlugin::get();
 
                 $agent->forPanel($panelId)
                     ->forUser($user)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Resources\CopilotConversations;
 
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotConversations\Pages\ListCopilotConversations;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotConversations\Pages\ViewCopilotConversation;
@@ -32,6 +33,21 @@ class CopilotConversationResource extends Resource
     public static function getModelLabel(): string
     {
         return __('filament-copilot::filament-copilot.conversation');
+    }
+
+    public static function canAccess(): bool
+    {
+        $guard = FilamentCopilotPlugin::get()->getManagementGuard();
+
+        if ($guard) {
+            try {
+                return auth()->guard($guard)->check();
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return parent::canAccess();
     }
 
     public static function form(Schema $schema): Schema

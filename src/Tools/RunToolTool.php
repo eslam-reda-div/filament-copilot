@@ -8,6 +8,7 @@ use EslamRedaDiv\FilamentCopilot\Contracts\CopilotPage;
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotResource;
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotWidget;
 use EslamRedaDiv\FilamentCopilot\Enums\AuditAction;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Tools\Request;
 use Stringable;
@@ -45,6 +46,10 @@ class RunToolTool extends BaseTool
 
         if (! $isCopilot) {
             return "Source class '{$sourceClass}' does not implement any Copilot interface.";
+        }
+
+        if (! $this->isSourceAuthorized($sourceClass)) {
+            return "Access denied: you do not have permission to access '" . class_basename($sourceClass) . "'.";
         }
 
         // Get tools from source and verify the tool is registered
@@ -94,5 +99,34 @@ class RunToolTool extends BaseTool
         ]);
 
         return $result;
+    }
+
+    protected function isSourceAuthorized(string $sourceClass): bool
+    {
+        if (! FilamentCopilotPlugin::get()->shouldRespectAuthorization()) {
+            return true;
+        }
+
+        try {
+            if (is_subclass_of($sourceClass, CopilotWidget::class)) {
+                if (! method_exists($sourceClass, 'canView')) {
+                    return true;
+                }
+
+                return (bool) call_user_func([$sourceClass, 'canView']);
+            }
+
+            if (is_subclass_of($sourceClass, CopilotResource::class) || is_subclass_of($sourceClass, CopilotPage::class)) {
+                if (! method_exists($sourceClass, 'canAccess')) {
+                    return true;
+                }
+
+                return (bool) call_user_func([$sourceClass, 'canAccess']);
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return true;
     }
 }

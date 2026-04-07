@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Resources\CopilotRateLimits;
 
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotRateLimit;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotRateLimits\Pages\CreateCopilotRateLimit;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotRateLimits\Pages\EditCopilotRateLimit;
@@ -32,6 +33,21 @@ class CopilotRateLimitResource extends Resource
     public static function getModelLabel(): string
     {
         return __('filament-copilot::filament-copilot.rate_limit');
+    }
+
+    public static function canAccess(): bool
+    {
+        $guard = FilamentCopilotPlugin::get()->getManagementGuard();
+
+        if ($guard) {
+            try {
+                return auth()->guard($guard)->check();
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return parent::canAccess();
     }
 
     public static function form(Schema $schema): Schema

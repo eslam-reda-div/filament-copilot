@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Discovery;
 
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotWidget;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use Filament\Facades\Filament;
 
 class WidgetInspector
@@ -29,6 +30,10 @@ class WidgetInspector
                 continue;
             }
 
+            if ($this->shouldRespectAuthorization() && ! $this->canViewWidget($widgetClass)) {
+                continue;
+            }
+
             $hasTools = false;
             try {
                 $description = $widgetClass::copilotWidgetDescription();
@@ -46,6 +51,24 @@ class WidgetInspector
         }
 
         return $widgets;
+    }
+
+    protected function shouldRespectAuthorization(): bool
+    {
+        return FilamentCopilotPlugin::get()->shouldRespectAuthorization();
+    }
+
+    protected function canViewWidget(string $widgetClass): bool
+    {
+        if (! method_exists($widgetClass, 'canView')) {
+            return true;
+        }
+
+        try {
+            return (bool) $widgetClass::canView();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**

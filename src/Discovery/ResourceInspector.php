@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Discovery;
 
 use EslamRedaDiv\FilamentCopilot\Contracts\CopilotResource;
+use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use Filament\Facades\Filament;
 
 class ResourceInspector
@@ -29,6 +30,10 @@ class ResourceInspector
                 continue;
             }
 
+            if ($this->shouldRespectAuthorization() && ! $this->canAccessResource($resourceClass)) {
+                continue;
+            }
+
             /** @var class-string<\Filament\Resources\Resource&CopilotResource> $resourceClass */
             $hasTools = false;
             try {
@@ -49,6 +54,24 @@ class ResourceInspector
         }
 
         return $resources;
+    }
+
+    protected function shouldRespectAuthorization(): bool
+    {
+        return FilamentCopilotPlugin::get()->shouldRespectAuthorization();
+    }
+
+    protected function canAccessResource(string $resourceClass): bool
+    {
+        if (! method_exists($resourceClass, 'canAccess')) {
+            return true;
+        }
+
+        try {
+            return (bool) $resourceClass::canAccess();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
