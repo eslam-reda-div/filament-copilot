@@ -268,7 +268,7 @@ class FilamentCopilotPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        if ($this->managementEnabled) {
+        if ($this->managementEnabled()) {
             $panel->resources([
                 CopilotConversationResource::class,
                 CopilotAuditLogResource::class,
