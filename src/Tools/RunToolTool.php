@@ -25,7 +25,7 @@ class RunToolTool extends BaseTool
         return [
             'source_class' => $schema->string()->description('The fully qualified class name of the resource, page, or widget that owns the tool')->required(),
             'tool_class' => $schema->string()->description('The fully qualified class name of the tool to execute')->required(),
-            'arguments' => $schema->string()->description('JSON object of arguments to pass to the tool (e.g. {"page": 1, "per_page": 10})'),
+            'arguments' => $schema->string()->description('JSON object of arguments to pass to the tool (e.g. {"page": 1, "per_page": 10})')->required(), 
         ];
     }
 

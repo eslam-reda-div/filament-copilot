@@ -19,7 +19,7 @@ class RecallTool extends BaseTool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'key' => $schema->string()->description('The memory key to recall. Leave empty to list all memories.'),
+            'key' => $schema->string()->description('The memory key to recall. Leave empty to list all memories.')->required(),
         ];
     }
 
