@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Services;
 
+use Closure;
 use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
 use EslamRedaDiv\FilamentCopilot\Tools\GetToolsTool;
 use EslamRedaDiv\FilamentCopilot\Tools\ListPagesTool;
@@ -33,10 +34,17 @@ class ToolRegistry
 
     /**
      * Register a global custom tool.
+     *
+     * Accepts a class-string (resolved via the container), a tool instance,
+     * or a closure. Closures are invoked on every buildTools() call and may
+     * return a single tool or an iterable of tools — this is how runtime-only
+     * tools (e.g. laravel/ai ^0.8 MCP client tools, which are instances
+     * produced by an MCP connection rather than resolvable classes) can be
+     * registered. Memoize inside the closure if resolution is expensive.
      */
-    public function registerGlobal(string $toolClass): void
+    public function registerGlobal(string|object $tool): void
     {
-        $this->globalTools[] = $toolClass;
+        $this->globalTools[] = $tool;
     }
 
     /**
@@ -55,27 +63,57 @@ class ToolRegistry
 
         $tools = [];
 
-        foreach (array_merge($this->toolClasses, $this->globalTools, $pluginTools) as $toolClass) {
-            $tool = app($toolClass);
+        foreach (array_merge($this->toolClasses, $this->globalTools, $pluginTools) as $entry) {
+            foreach ($this->resolveTools($entry) as $tool) {
+                if ($tool instanceof BaseTool) {
+                    $tool->forPanel($panelId)
+                        ->forUser($user)
+                        ->forTenant($tenant);
 
-            if ($tool instanceof BaseTool) {
-                $tool->forPanel($panelId)
-                    ->forUser($user)
-                    ->forTenant($tenant);
+                    if ($conversationId) {
+                        $tool->forConversation($conversationId);
+                    }
+                }
+
+                $tools[] = $tool;
             }
-
-            if ($conversationId && $tool instanceof BaseTool) {
-                $tool->forConversation($conversationId);
-            }
-
-            $tools[] = $tool;
         }
 
         return $tools;
     }
 
     /**
-     * Get the list of registered tool classes.
+     * Resolve a registered entry into zero or more tool objects.
+     */
+    protected function resolveTools(string|object $entry): iterable
+    {
+        if (is_string($entry)) {
+            $entry = app($entry);
+        }
+
+        if ($entry instanceof Closure) {
+            $entry = $entry();
+        }
+
+        if ($entry === null) {
+            return;
+        }
+
+        if (is_iterable($entry)) {
+            foreach ($entry as $tool) {
+                if ($tool !== null) {
+                    yield $tool;
+                }
+            }
+
+            return;
+        }
+
+        yield $entry;
+    }
+
+    /**
+     * Get the list of registered tool entries (class-strings, instances, or closures).
      */
     public function getToolClasses(): array
     {
