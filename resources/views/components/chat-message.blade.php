@@ -71,6 +71,13 @@
         </div>
     </div>
 @elseif($isAssistant)
+    {{-- Feedback thumbs. Only a persisted message carries an id, so the id gate
+         doubles as the "is there something rateable to talk to" gate. --}}
+    @php
+        $messageId = $msg['id'] ?? null;
+        $rating = $msg['rating'] ?? null;
+        $showFeedback = $messageId !== null && config('filament-copilot.feedback.enabled', true);
+    @endphp
     <div class="flex items-start gap-2.5">
         <div
             class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0 mt-0.5">
@@ -83,6 +90,34 @@
                 {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
             </div>
         </div>
+        @if ($showFeedback)
+            @php
+                $helpfulLabel = $rating === 'positive'
+                    ? __('filament-copilot::filament-copilot.feedback_remove_helpful')
+                    : __('filament-copilot::filament-copilot.feedback_helpful');
+                $notHelpfulLabel = $rating === 'negative'
+                    ? __('filament-copilot::filament-copilot.feedback_remove_not_helpful')
+                    : __('filament-copilot::filament-copilot.feedback_not_helpful');
+            @endphp
+            <div class="flex items-center gap-0.5 shrink-0 self-end">
+                <button type="button" wire:click="submitRating('{{ $messageId }}', 'positive')"
+                    wire:loading.attr="disabled" wire:target="submitRating"
+                    class="flex items-center justify-center w-6 h-6 rounded-md transition duration-75 hover:bg-gray-500/5 dark:hover:bg-gray-400/5 {{ $rating === 'positive' ? 'text-success-600 dark:text-success-400' : 'text-gray-400 dark:text-gray-500 opacity-50 hover:opacity-100' }}"
+                    title="{{ $helpfulLabel }}" aria-label="{{ $helpfulLabel }}"
+                    aria-pressed="{{ $rating === 'positive' ? 'true' : 'false' }}">
+                    <x-filament::icon :icon="$rating === 'positive' ? 'heroicon-s-hand-thumb-up' : 'heroicon-o-hand-thumb-up'"
+                        class="w-3.5 h-3.5" />
+                </button>
+                <button type="button" wire:click="submitRating('{{ $messageId }}', 'negative')"
+                    wire:loading.attr="disabled" wire:target="submitRating"
+                    class="flex items-center justify-center w-6 h-6 rounded-md transition duration-75 hover:bg-gray-500/5 dark:hover:bg-gray-400/5 {{ $rating === 'negative' ? 'text-danger-600 dark:text-danger-400' : 'text-gray-400 dark:text-gray-500 opacity-50 hover:opacity-100' }}"
+                    title="{{ $notHelpfulLabel }}" aria-label="{{ $notHelpfulLabel }}"
+                    aria-pressed="{{ $rating === 'negative' ? 'true' : 'false' }}">
+                    <x-filament::icon :icon="$rating === 'negative' ? 'heroicon-s-hand-thumb-down' : 'heroicon-o-hand-thumb-down'"
+                        class="w-3.5 h-3.5" />
+                </button>
+            </div>
+        @endif
     </div>
 @elseif($isSystem)
     <div class="flex justify-center px-4">

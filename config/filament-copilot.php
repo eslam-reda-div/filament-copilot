@@ -111,6 +111,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Message Feedback
+    |--------------------------------------------------------------------------
+    | Thumbs up / down on assistant replies. When disabled the buttons are
+    | hidden and ratings can no longer be submitted; ratings already stored on
+    | copilot_messages.rating are kept and still reported in the management UI.
+    */
+
+    'feedback' => [
+        'enabled' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Quick Actions / Canned Prompts
     |--------------------------------------------------------------------------
     */

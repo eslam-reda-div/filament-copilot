@@ -138,6 +138,7 @@
             const decoder = new TextDecoder();
             let buffer = '';
             let newConversationId = null;
+            let assistantMessageId = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -198,6 +199,9 @@
                                     this.toolCalls = [];
                                     break;
                                 case 'done':
+                                    // Absent on error streams, and on servers
+                                    // running an older package release.
+                                    assistantMessageId = data.message_id || null;
                                     break;
                             }
                         } catch (e) {
@@ -220,6 +224,7 @@
                     content: this.streamedContent,
                     newConversationId: newConversationId,
                     toolCalls: this.toolCalls.length ? JSON.parse(JSON.stringify(this.toolCalls)) : null,
+                    messageId: assistantMessageId,
                 });
 
                 // Execute pending navigation after stream completes

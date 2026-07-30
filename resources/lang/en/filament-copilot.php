@@ -33,6 +33,18 @@ return [
     'rate_limit_exceeded' => 'You have exceeded the rate limit. Please try again later.',
     'error_occurred' => 'An error occurred',
 
+    // Message Feedback
+    'feedback_helpful' => 'Helpful',
+    'feedback_not_helpful' => 'Not helpful',
+    'feedback_remove_helpful' => 'Remove helpful rating',
+    'feedback_remove_not_helpful' => 'Remove unhelpful rating',
+    'thumbs_up' => 'Thumbs Up',
+    'thumbs_down' => 'Thumbs Down',
+    'has_negative_rating' => 'Has Negative Rating',
+    'all_conversations' => 'All conversations',
+    'with_negative_rating' => 'With thumbs down',
+    'without_negative_rating' => 'Without thumbs down',
+
     // Ask User
     'question_from_copilot' => 'Copilot needs your input:',
     'approve' => 'Approve',

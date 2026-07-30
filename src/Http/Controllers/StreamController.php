@@ -240,7 +240,11 @@ class StreamController
                     'output_tokens' => $usage->completionTokens ?? 0,
                 ]);
 
-                $this->sendSseEvent('done', []);
+                // The persisted assistant message id lets the chat component
+                // reference the reply it just streamed — for message feedback,
+                // and for anything else that needs to address it later. Older
+                // published copies of the chat view simply ignore the payload.
+                $this->sendSseEvent('done', ['message_id' => $assistantMessage->id]);
             } catch (\Throwable $e) {
                 $this->sendSseEvent('error', ['message' => $e->getMessage()]);
                 $this->sendSseEvent('done', []);

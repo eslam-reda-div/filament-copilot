@@ -27,6 +27,7 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
   - [Audit Logging](#audit-logging)
   - [Agent Memory](#agent-memory)
   - [Management Dashboard](#management-dashboard)
+  - [Message Feedback](#message-feedback)
   - [Quick Actions](#quick-actions)
   - [System Prompt](#system-prompt)
   - [Global Tools](#global-tools)
@@ -112,6 +113,7 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
 - **9 Tool Templates** — Generate tools instantly with the `make:copilot-tool` artisan command (list, view, search, create, edit, delete, force-delete, restore, custom).
 - **Conversation History** — Full conversation persistence with a sidebar for browsing, loading, and deleting past conversations.
 - **Agent Memory** — The AI remembers facts across conversations using a per-user key-value memory store (Remember & Recall tools).
+- **Message Feedback** — Thumbs up/down on assistant replies, surfaced back to admins as a thumbs-down count and a "has negative rating" filter on the conversations table.
 - **Audit Logging** — Comprehensive audit trail tracking messages, tool calls, record access, and navigation events.
 - **Rate Limiting** — Per-user hourly/daily message and token rate limits with automatic blocking and unblocking.
 - **Token Budget Tracking** — Daily and monthly token budget tracking with configurable warning thresholds.
@@ -122,7 +124,7 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
 - **Authorization Aware** — Respects Filament's authorization policies out of the box.
 - **Fully Translatable** — All UI strings are translatable with a complete English language file (100+ keys).
 - **Publishable Assets, Config, Views, Stubs** — Customize everything to fit your needs.
-- **81 Tests** — Comprehensive test suite covering models, services, tools, Livewire components, discovery, enums, config, plugin, and streaming.
+- **121 Tests** — Comprehensive test suite covering models, services, tools, Livewire components, views, discovery, enums, config, plugin, and streaming.
 
 ---
 
@@ -284,6 +286,25 @@ The AI agent can remember facts across conversations. Memories are scoped per-us
 ```
 
 Enable the built-in management UI to view conversations, audit logs, rate limits, token usage charts, and top users — all within your Filament panel.
+
+### Message Feedback
+
+```php
+'feedback' => [
+    'enabled' => true,
+],
+```
+
+Adds a thumbs up / thumbs down control under every assistant reply in the chat. One click rates the reply, clicking the lit thumb again clears it, and the rating is stored on `copilot_messages.rating` (`positive`, `negative`, or `null`).
+
+Ratings are only accepted for assistant messages in the signed-in participant's own conversations, scoped by panel and tenant like every other conversation lookup in the package.
+
+Admins get the feedback back in the management dashboard's **Conversations** resource:
+
+- a **Thumbs Down** badge column, shown only for the conversations that actually collected one, and
+- a **Has Negative Rating** filter for jumping straight to the conversations that went wrong.
+
+Set `enabled` to `false` to hide the buttons and stop accepting ratings. Ratings already recorded are kept and still reported in the management UI.
 
 ### Quick Actions
 
@@ -764,7 +785,7 @@ The package creates 7 database tables:
 | Table                    | Model                 | Description                                                  |
 | ------------------------ | --------------------- | ------------------------------------------------------------ |
 | `copilot_conversations`  | `CopilotConversation` | Conversation storage with polymorphic participant and tenant |
-| `copilot_messages`       | `CopilotMessage`      | Message history with role enum and token tracking            |
+| `copilot_messages`       | `CopilotMessage`      | Message history with role enum, token tracking, and feedback rating |
 | `copilot_tool_calls`     | `CopilotToolCall`     | Tool call tracking with approval status workflow             |
 | `copilot_audit_logs`     | `CopilotAuditLog`     | Detailed audit trail with 25 action types                    |
 | `copilot_rate_limits`    | `CopilotRateLimit`    | Per-user rate limit configuration and blocking               |
@@ -778,6 +799,7 @@ All models use ULIDs as primary keys and support polymorphic relationships for p
 | Enum             | Values                                                                                   |
 | ---------------- | ---------------------------------------------------------------------------------------- |
 | `MessageRole`    | `User`, `Assistant`, `System`, `Tool`                                                    |
+| `MessageRating`  | `Positive`, `Negative`                                                                   |
 | `ToolCallStatus` | `Pending`, `Approved`, `Rejected`, `Executed`, `Failed`                                  |
 | `AuditAction`    | 25 actions including `MessageSent`, `ToolCalled`, `RecordCreated`, `RecordDeleted`, etc. |
 
@@ -799,7 +821,7 @@ This adds:
   - **Stats Overview** — 4 cards showing total conversations, messages, tool calls, and active users
   - **Token Usage Chart** — 30-day line chart of daily token consumption
   - **Top Users Table** — Sortable table of the most active copilot users
-- **Conversations Resource** — Browse, view, and manage all copilot conversations
+- **Conversations Resource** — Browse, view, and manage all copilot conversations, including the thumbs-down count and the "has negative rating" filter from [Message Feedback](#message-feedback)
 - **Audit Logs Resource** — Search and filter the complete audit trail
 - **Rate Limits Resource** — Manage per-user rate limits and blocking
 
@@ -866,12 +888,13 @@ Stubs are published to `stubs/filament-copilot/` in your project root.
 
 ## Testing
 
-The package includes 81 tests with 159 assertions covering:
+The package includes 121 tests with 254 assertions covering:
 
 - Models & relationships
 - Services (ConversationManager, ToolRegistry, RateLimitService, ExportService)
 - Built-in tools
 - Livewire components
+- Blade views
 - Discovery inspectors
 - Enums
 - Configuration

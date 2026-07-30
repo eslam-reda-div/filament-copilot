@@ -1,5 +1,6 @@
 <?php
 
+use EslamRedaDiv\FilamentCopilot\Enums\MessageRating;
 use EslamRedaDiv\FilamentCopilot\Enums\MessageRole;
 use EslamRedaDiv\FilamentCopilot\Enums\ToolCallStatus;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
@@ -114,4 +115,22 @@ it('gets messages formatted for chat with tool calls in order', function () {
         ->and($messages[1]['arguments'])->toMatchArray(['days' => 7])
         ->and($messages[1]['result'])->toBe('Report generated')
         ->and($messages[2]['role'])->toBe('assistant');
+});
+
+it('gets messages formatted for chat with the message id and rating', function () {
+    $user = createTestUser();
+    $manager = app(ConversationManager::class);
+    $conversation = $manager->create($user, 'admin');
+
+    $userMessage = $manager->addUserMessage($conversation, 'Generate a report for the last 7 days');
+    $assistantMessage = $manager->addAssistantMessage($conversation, 'Done. I generated the report.');
+    $assistantMessage->update(['rating' => MessageRating::Negative]);
+
+    $messages = $manager->getMessagesForChat($conversation);
+
+    expect($messages)->toHaveCount(2)
+        ->and($messages[0]['id'])->toBe($userMessage->id)
+        ->and($messages[0]['rating'])->toBeNull()
+        ->and($messages[1]['id'])->toBe($assistantMessage->id)
+        ->and($messages[1]['rating'])->toBe('negative');
 });

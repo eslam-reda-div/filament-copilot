@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Models;
 
+use EslamRedaDiv\FilamentCopilot\Enums\MessageRating;
 use EslamRedaDiv\FilamentCopilot\Enums\MessageRole;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,7 @@ class CopilotMessage extends Model
         'conversation_id',
         'role',
         'content',
+        'rating',
         'metadata',
         'input_tokens',
         'output_tokens',
@@ -27,6 +29,7 @@ class CopilotMessage extends Model
     {
         return [
             'role' => MessageRole::class,
+            'rating' => MessageRating::class,
             'metadata' => 'array',
             'input_tokens' => 'integer',
             'output_tokens' => 'integer',
