@@ -2,8 +2,12 @@
 
 namespace EslamRedaDiv\FilamentCopilot\Tests;
 
+use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
+use BladeUI\Icons\BladeIconsServiceProvider;
 use EslamRedaDiv\FilamentCopilot\FilamentCopilotServiceProvider;
+use Filament\Support\SupportServiceProvider;
 use Illuminate\Database\Eloquent\Model;
+use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -21,6 +25,12 @@ abstract class TestCase extends BaseTestCase
     protected function getPackageProviders($app): array
     {
         return [
+            // Enough of Filament for the package's own Blade views
+            // (`x-filament::icon`) to render inside tests.
+            BladeIconsServiceProvider::class,
+            BladeHeroiconsServiceProvider::class,
+            LivewireServiceProvider::class,
+            SupportServiceProvider::class,
             FilamentCopilotServiceProvider::class,
         ];
     }
