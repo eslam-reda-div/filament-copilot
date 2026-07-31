@@ -126,6 +126,10 @@ class ConversationManager
                 $messages = [[
                     'role' => $message->role->value,
                     'content' => $message->content,
+                    // The chat blade needs the persisted id to submit feedback
+                    // against, and the rating to render the active thumb.
+                    'id' => $message->id,
+                    'rating' => $message->rating?->value,
                 ]];
 
                 foreach ($message->toolCalls->sortBy('created_at') as $toolCall) {

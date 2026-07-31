@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Livewire;
 
+use EslamRedaDiv\FilamentCopilot\Enums\MessageRating;
+use EslamRedaDiv\FilamentCopilot\Enums\MessageRole;
 use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
+use EslamRedaDiv\FilamentCopilot\Models\CopilotMessage;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\ExportService;
 use Filament\Facades\Filament;
@@ -88,9 +91,15 @@ class CopilotChat extends Component
 
     /**
      * Called from JavaScript after SSE streaming completes.
+     *
+     * `$messageId` is the id `StreamController` persisted for this reply and
+     * echoed back in the SSE `done` payload. It is optional so a published copy
+     * of the chat view that predates that payload keeps working — the reply is
+     * then simply rendered without feedback buttons until the conversation is
+     * reloaded.
      */
     #[On('copilot-stream-complete')]
-    public function handleStreamComplete(string $content, ?string $newConversationId = null, ?array $toolCalls = null): void
+    public function handleStreamComplete(string $content, ?string $newConversationId = null, ?array $toolCalls = null, ?string $messageId = null): void
     {
         if ($newConversationId && ! $this->conversationId) {
             $this->conversationId = $newConversationId;
@@ -111,12 +120,91 @@ class CopilotChat extends Component
             }
         }
 
-        $this->messages[] = [
+        $assistantMessage = [
             'role' => 'assistant',
             'content' => $content,
         ];
 
+        // Not trusted as proof of ownership — it only decides whether the
+        // buttons render. Every write still goes through submitRating(), which
+        // re-resolves the message against the current participant.
+        if ($messageId !== null) {
+            $assistantMessage['id'] = $messageId;
+            $assistantMessage['rating'] = null;
+        }
+
+        $this->messages[] = $assistantMessage;
+
         $this->loadConversations();
+    }
+
+    /**
+     * Record (or clear) a thumbs up/down on one assistant message.
+     *
+     * Ownership is resolved in the database before anything the caller sent is
+     * validated: a message belonging to somebody else's conversation must not
+     * even reveal that it exists, so every rejection is the same silent no-op.
+     */
+    public function submitRating(string $messageId, string $rating): void
+    {
+        if (! config('filament-copilot.feedback.enabled', true)) {
+            return;
+        }
+
+        $user = Filament::auth()->user();
+        $panelId = Filament::getCurrentPanel()?->getId();
+
+        if (! $user || ! $panelId) {
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        $message = CopilotMessage::query()
+            ->whereKey($messageId)
+            ->whereHas('conversation', fn ($query) => $query
+                ->forPanel($panelId)
+                ->forParticipant($user)
+                ->forTenant($tenant))
+            ->first();
+
+        if (! $message) {
+            return;
+        }
+
+        $rating = MessageRating::tryFrom($rating);
+
+        if (! $rating) {
+            return;
+        }
+
+        // Only the copilot's own replies are ratable — never the user's own
+        // text, system notices or tool output.
+        if ($message->role !== MessageRole::Assistant) {
+            return;
+        }
+
+        // Clicking the thumb that is already lit clears the rating.
+        $message->update([
+            'rating' => $message->rating === $rating ? null : $rating,
+        ]);
+
+        $this->applyRatingToMessages($messageId, $message->rating?->value);
+    }
+
+    /**
+     * Reflect a new rating in the component state so the thumb lights up
+     * without reloading the conversation.
+     */
+    protected function applyRatingToMessages(string $messageId, ?string $rating): void
+    {
+        foreach ($this->messages as $index => $message) {
+            if (($message['id'] ?? null) === $messageId) {
+                $this->messages[$index]['rating'] = $rating;
+
+                return;
+            }
+        }
     }
 
     /**
