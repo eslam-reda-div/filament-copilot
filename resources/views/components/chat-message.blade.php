@@ -102,6 +102,17 @@
         $messageId = $msg['id'] ?? null;
         $rating = $msg['rating'] ?? null;
         $showFeedback = $messageId !== null && config('filament-copilot.feedback.enabled', true);
+
+        // Replies stored before agent steps were separated can have a table
+        // glued onto the previous sentence ("…des Projekts.| # | Titel |"),
+        // which Markdown can't parse. Move such a header onto its own
+        // paragraph. Only a header directly after sentence punctuation and
+        // followed by a delimiter row is touched, so valid tables are left alone.
+        $content = preg_replace(
+            '/^([^|\n]*[.!?:])[ \t]*(\|[^\n]*\|[ \t]*\r?\n[ \t]*\|?[ \t]*:?-{3,})/mu',
+            "$1\n\n$2",
+            (string) ($msg['content'] ?? ''),
+        ) ?? (string) ($msg['content'] ?? '');
     @endphp
     <div class="flex items-start gap-2.5">
         <div
@@ -117,7 +128,7 @@
                      to html_input=ALLOW, so a prompt-injected <script> or event handler
                      in the assistant's reply would render live. See
                      config('filament-copilot.chat.html_input') for the opt-out. --}}
-                {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '', [
+                {!! \Illuminate\Support\Str::markdown($content, [
                     'html_input' => config('filament-copilot.chat.html_input', 'escape'),
                     'allow_unsafe_links' => false,
                 ]) !!}
