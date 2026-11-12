@@ -8,6 +8,7 @@ use Closure;
 use EslamRedaDiv\FilamentCopilot\Pages\CopilotDashboardPage;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotAuditLogs\CopilotAuditLogResource;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotConversations\CopilotConversationResource;
+use EslamRedaDiv\FilamentCopilot\Resources\CopilotFeedback\CopilotFeedbackResource;
 use EslamRedaDiv\FilamentCopilot\Resources\CopilotRateLimits\CopilotRateLimitResource;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
@@ -285,6 +286,7 @@ class FilamentCopilotPlugin implements Plugin
         if ($this->isManagementEnabled()) {
             $panel->resources([
                 CopilotConversationResource::class,
+                CopilotFeedbackResource::class,
                 CopilotAuditLogResource::class,
                 CopilotRateLimitResource::class,
             ]);

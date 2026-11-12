@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Pages;
 
 use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
+use EslamRedaDiv\FilamentCopilot\Widgets\CopilotFeedbackOverview;
 use EslamRedaDiv\FilamentCopilot\Widgets\CopilotStatsOverview;
 use EslamRedaDiv\FilamentCopilot\Widgets\TokenUsageChart;
 use EslamRedaDiv\FilamentCopilot\Widgets\TopUsersTable;
@@ -49,6 +50,7 @@ class CopilotDashboardPage extends Page
     {
         return [
             CopilotStatsOverview::class,
+            CopilotFeedbackOverview::class,
         ];
     }
 

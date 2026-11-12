@@ -175,6 +175,12 @@ return [
 
     'feedback' => [
         'enabled' => true,
+
+        // When true, a thumbs down opens a short form instead of being
+        // one click: what went wrong (category), what the answer should
+        // have been, and whether a new tool is needed. The reports land in
+        // the management dashboard's Feedback resource for review.
+        'detailed' => false,
     ],
 
     /*
