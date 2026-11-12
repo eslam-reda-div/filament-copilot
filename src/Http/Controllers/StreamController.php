@@ -177,12 +177,31 @@ class StreamController
                     }
                 }
 
+                // Set once a tool call or result ends a generation step, so the
+                // next step's text starts its own paragraph (see TextDelta).
+                $atStepBoundary = false;
+
                 // Stream real-time chunks from the AI provider
                 foreach ($streamResponse as $event) {
                     if ($event instanceof \Laravel\Ai\Streaming\Events\TextDelta) {
-                        $responseText .= $event->delta;
-                        $this->sendSseEvent('chunk', ['text' => $event->delta]);
+                        $delta = $event->delta;
+
+                        // Each agent step streams its own text. Appended back to
+                        // back, the text after a tool call was glued onto the
+                        // previous step ("…the project.Now I fetch…"), and a
+                        // Markdown table or list starting the new step landed
+                        // mid-line and never rendered. The separator is sent in
+                        // the chunk too, so the live view matches what's stored.
+                        if ($atStepBoundary && $delta !== '') {
+                            $delta = $this->separateFromPreviousStep($responseText, $delta);
+                            $atStepBoundary = false;
+                        }
+
+                        $responseText .= $delta;
+                        $this->sendSseEvent('chunk', ['text' => $delta]);
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ToolCall) {
+                        $atStepBoundary = true;
+
                         $this->sendSseEvent('tool_call', [
                             'tool_id' => $event->toolCall->id,
                             'tool_name' => $event->toolCall->name,
@@ -198,6 +217,7 @@ class StreamController
                             ]);
                         }
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ToolResult) {
+                        $atStepBoundary = true;
                         $rawResult = is_string($event->toolResult->result) ? $event->toolResult->result : json_encode($event->toolResult->result);
                         $denied = (bool) ($event->denied ?? false);
 
@@ -245,6 +265,8 @@ class StreamController
                             ));
                         }
                     } elseif (get_class($event) === 'Laravel\\Ai\\Streaming\\Events\\ToolApprovalRequest') {
+                        $atStepBoundary = true;
+
                         foreach ($event->pendingApprovals as $approval) {
                             $pendingApprovals[] = $approval->toArray();
 
@@ -363,6 +385,23 @@ class StreamController
                 $this->sendSseEvent('done', []);
             }
         });
+    }
+
+    /**
+     * Prefix the first text of a new agent step with the line breaks needed
+     * to start a new Markdown block (a blank line), counting any the
+     * previous step already ended with or the new step starts with.
+     */
+    protected function separateFromPreviousStep(string $previous, string $delta): string
+    {
+        if (trim($previous) === '') {
+            return $delta;
+        }
+
+        $trailing = substr_count(substr($previous, strlen(rtrim($previous, "\r\n"))), "\n");
+        $leading = substr_count(substr($delta, 0, strlen($delta) - strlen(ltrim($delta, "\r\n"))), "\n");
+
+        return str_repeat("\n", max(0, 2 - $trailing - $leading)).$delta;
     }
 
     protected function sseResponse(callable $callback): StreamedResponse
