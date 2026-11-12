@@ -112,16 +112,35 @@ class CopilotChat extends Component
         // Add tool calls as collapsible messages
         if ($toolCalls) {
             foreach ($toolCalls as $toolCall) {
+                $status = $toolCall['status'] ?? null;
+
                 $this->messages[] = [
                     'role' => 'tool_call',
                     'tool_name' => $toolCall['name'] ?? 'Tool',
                     'arguments' => $toolCall['arguments'] ?? null,
                     'result' => $toolCall['result'] ?? null,
-                    'success' => $toolCall['status'] === 'done',
+                    'success' => $status === 'done',
                     'error' => $toolCall['error'] ?? null,
                     'content' => $toolCall['result'] ?? '',
+                    // Mirrors the persisted ToolCallStatus values so live and
+                    // reloaded tool boxes render the same way.
+                    'status' => match ($status) {
+                        'awaiting_approval' => 'pending',
+                        'rejected' => 'rejected',
+                        'error' => 'failed',
+                        default => 'executed',
+                    },
+                    'requires_approval' => $status === 'awaiting_approval',
                 ];
             }
+        }
+
+        // A turn that only called tools or paused for approval produces no
+        // text; an empty bubble would just be noise.
+        if (trim($content) === '') {
+            $this->loadConversations();
+
+            return;
         }
 
         $assistantMessage = [
@@ -236,6 +255,7 @@ class CopilotChat extends Component
         $this->conversationId = null;
         $this->messages = [];
         $this->pendingToolCallId = null;
+        $this->dispatch('copilot-approvals-restored', approvals: []);
         $this->dispatch('copilot-conversation-changed', conversationId: null);
     }
 
@@ -263,6 +283,14 @@ class CopilotChat extends Component
 
         $this->conversationId = $conversationId;
         $this->messages = $this->getConversationMessages($conversation);
+
+        // A conversation that is paused on a tool approval shows its approval
+        // card again, so it can still be approved or rejected after a reload.
+        $this->dispatch(
+            'copilot-approvals-restored',
+            approvals: app(ConversationManager::class)->getPendingApprovals($conversation),
+        );
+
         $this->dispatch('copilot-conversation-changed', conversationId: $conversationId);
     }
 

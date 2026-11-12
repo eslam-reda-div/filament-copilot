@@ -153,10 +153,11 @@ class ConversationManager
                         'tool_name' => $toolCall->tool_name,
                         'arguments' => $toolCall->tool_input,
                         'result' => $toolCall->tool_output,
-                        'success' => ! $isFailed,
+                        'success' => ! $isFailed && $toolCall->status !== ToolCallStatus::Rejected,
                         'error' => $isFailed ? ($toolCall->tool_output ?: 'Tool execution failed.') : null,
                         'content' => $toolCall->tool_output ?? '',
                         'status' => $toolCall->status->value,
+                        'requires_approval' => (bool) $toolCall->requires_approval,
                     ];
                 }
 
@@ -164,6 +165,46 @@ class ConversationManager
             })
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Tool approvals the conversation is currently paused on.
+     *
+     * A turn that pauses for human approval stores its pending approvals on
+     * the assistant message it produced. They are only still pending while
+     * that message is the newest one in the conversation: resuming the turn,
+     * or sending a new message instead, adds a later message and abandons them.
+     *
+     * @return array<int, array{id: string, tool: string, arguments: array<string, mixed>, reason: ?string}>
+     */
+    public function getPendingApprovals(CopilotConversation $conversation): array
+    {
+        /** @var CopilotMessage|null $latest */
+        $latest = $conversation->messages()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latest || $latest->role !== MessageRole::Assistant) {
+            return [];
+        }
+
+        $approvals = $latest->metadata['pending_approvals'] ?? [];
+
+        if (! is_array($approvals)) {
+            return [];
+        }
+
+        return collect($approvals)
+            ->filter(fn ($approval) => is_array($approval) && filled($approval['id'] ?? null))
+            ->map(fn (array $approval) => [
+                'id' => (string) $approval['id'],
+                'tool' => (string) ($approval['tool'] ?? ''),
+                'arguments' => is_array($approval['arguments'] ?? null) ? $approval['arguments'] : [],
+                'reason' => isset($approval['reason']) ? (string) $approval['reason'] : null,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
