@@ -10,6 +10,7 @@ use EslamRedaDiv\FilamentCopilot\Events\CopilotConversationCreated;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotMessage;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotToolCall;
+use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Messages\AssistantMessage;
@@ -146,6 +147,13 @@ class ConversationManager
 
                 foreach ($message->toolCalls->sortBy('created_at') as $toolCall) {
                     /** @var CopilotToolCall $toolCall */
+
+                    // The question is part of the reply text and the answer is
+                    // a user message; no tool box for it.
+                    if ($toolCall->tool_name === AskUserTool::NAME) {
+                        continue;
+                    }
+
                     $isFailed = $toolCall->status === ToolCallStatus::Failed;
 
                     $messages[] = [
@@ -197,12 +205,22 @@ class ConversationManager
 
         return collect($approvals)
             ->filter(fn ($approval) => is_array($approval) && filled($approval['id'] ?? null))
-            ->map(fn (array $approval) => [
-                'id' => (string) $approval['id'],
-                'tool' => (string) ($approval['tool'] ?? ''),
-                'arguments' => is_array($approval['arguments'] ?? null) ? $approval['arguments'] : [],
-                'reason' => isset($approval['reason']) ? (string) $approval['reason'] : null,
-            ])
+            ->map(function (array $approval): array {
+                $restored = [
+                    'id' => (string) $approval['id'],
+                    'tool' => (string) ($approval['tool'] ?? ''),
+                    'arguments' => is_array($approval['arguments'] ?? null) ? $approval['arguments'] : [],
+                    'reason' => isset($approval['reason']) ? (string) $approval['reason'] : null,
+                ];
+
+                // An ask_user pause is a question for the user, not an action.
+                if ($restored['tool'] === AskUserTool::NAME) {
+                    $restored['question'] = (string) ($approval['question'] ?? AskUserTool::questionFrom($restored['arguments']));
+                    $restored['options'] = AskUserTool::optionsFrom(['options' => $approval['options'] ?? $restored['arguments']['options'] ?? []]);
+                }
+
+                return $restored;
+            })
             ->values()
             ->all();
     }

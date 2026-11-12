@@ -59,6 +59,7 @@ class ContextBuilder
         $sections = [];
 
         $sections[] = $this->buildBasePrompt();
+        $sections[] = $this->buildAskUserGuidance();
         $sections[] = $this->buildResourceContext();
         $sections[] = $this->buildPageContext();
         $sections[] = $this->buildWidgetContext();
@@ -107,6 +108,24 @@ You have global tools for discovery and execution:
 
 ## Memory
 - Use **remember** / **recall** to store and retrieve user preferences across conversations.
+PROMPT;
+    }
+
+    /**
+     * Kept separate from the base prompt so it also applies when an app
+     * replaces the base prompt via `filament-copilot.system_prompt`.
+     */
+    protected function buildAskUserGuidance(): string
+    {
+        if (! config('filament-copilot.ask_user.enabled', true)) {
+            return '';
+        }
+
+        return <<<'PROMPT'
+## Asking the User
+- When you need information, a choice or a confirmation from the user, call **ask_user** with one short question (and 2-6 answer options when the likely answers are known). Do not ask questions in plain text, and do not call other tools in the same step.
+- Use **ask_user** to confirm destructive or ambiguous actions before running them.
+- The conversation pauses until the user answers; their answer is the tool result. Continue the task with it.
 PROMPT;
     }
 

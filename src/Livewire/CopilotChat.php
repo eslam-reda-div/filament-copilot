@@ -11,6 +11,7 @@ use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotMessage;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\ExportService;
+use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use Filament\Facades\Filament;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -112,6 +113,11 @@ class CopilotChat extends Component
         // Add tool calls as collapsible messages
         if ($toolCalls) {
             foreach ($toolCalls as $toolCall) {
+                // A question is shown as text in the reply, not as a tool box.
+                if (($toolCall['name'] ?? null) === AskUserTool::NAME) {
+                    continue;
+                }
+
                 $status = $toolCall['status'] ?? null;
 
                 $this->messages[] = [
@@ -239,6 +245,19 @@ class CopilotChat extends Component
         $this->messages[] = [
             'role' => 'system',
             'content' => __('filament-copilot::filament-copilot.error_occurred').': '.$error,
+        ];
+    }
+
+    /**
+     * Called from JavaScript for an informational stream notice, such as a
+     * turn that ended without the assistant writing anything.
+     */
+    #[On('copilot-stream-notice')]
+    public function handleStreamNotice(string $message): void
+    {
+        $this->messages[] = [
+            'role' => 'system',
+            'content' => $message,
         ];
     }
 

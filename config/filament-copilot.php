@@ -25,7 +25,23 @@ return [
     */
 
     'agent' => [
+        // Seconds the provider may take for one request. Reasoning models
+        // can think for a long time before they answer.
         'timeout' => 120,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clarifying Questions
+    |--------------------------------------------------------------------------
+    | Gives the model an `ask_user` tool. When it needs information or a
+    | choice from the user, the turn pauses and the chat shows the question
+    | (with one-click answer options); the answer resumes the same turn.
+    | Requires Laravel AI's conversation tables, like tool approvals.
+    */
+
+    'ask_user' => [
+        'enabled' => true,
     ],
 
     /*
@@ -63,6 +79,18 @@ return [
         */
 
         'html_input' => 'escape',
+
+        /*
+        |----------------------------------------------------------------
+        | Reasoning
+        |----------------------------------------------------------------
+        | Reasoning models think before they answer. While they do, the
+        | chat shows "Thinking…" and lets the user expand the streamed
+        | reasoning. Set to false to show only the indicator, without the
+        | reasoning text.
+        */
+
+        'stream_reasoning' => true,
     ],
 
     /*

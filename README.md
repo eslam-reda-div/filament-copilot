@@ -251,6 +251,22 @@ The configuration file is published to `config/filament-copilot.php`. Here is a 
 
 Set via your `.env` file. See [Supported AI Providers](#supported-ai-providers) for the full list.
 
+### Timeout & Reasoning Models
+
+```php
+'agent' => [
+    'timeout' => 120, // seconds per provider request
+],
+
+'chat' => [
+    'stream_reasoning' => true,
+],
+```
+
+`agent.timeout` is passed to every provider request. Raise it for slow or reasoning models. Without it, Laravel AI's default of 60 seconds applies.
+
+While a reasoning model thinks, the chat shows **Thinking…** and lets the user expand the streamed reasoning. Set `chat.stream_reasoning` to `false` to show only the indicator. If a turn ends without the model writing anything, the chat says so instead of showing nothing.
+
 ### Rate Limiting
 
 ```php
@@ -675,8 +691,25 @@ The following tools are automatically available to the AI agent without any conf
 | `RunToolTool`       | Executes a discovered tool with provided arguments                 |
 | `RememberTool`      | Stores a key-value memory for the current user                     |
 | `RecallTool`        | Retrieves a stored memory (or lists all memories)                  |
+| `AskUserTool`       | Asks the user a clarifying question and waits for the answer       |
 
 The agent uses these tools to navigate your panel structure and execute operations dynamically.
+
+### Clarifying Questions (`ask_user`)
+
+When the model needs information, a choice or a confirmation, it calls `ask_user` instead of asking in plain text:
+
+- The turn **pauses**, using Laravel AI's tool-approval mechanism, so the model stops instead of guessing.
+- The question appears in the reply.
+- A card underneath offers the model's suggested answers as one-click buttons. Typing in the chat input answers the question too, and **Skip** declines it.
+- The answer is added to the transcript and **resumes the same turn**. The model receives it as the tool result and continues.
+- Pending questions survive a page reload, like approvals.
+
+This needs Laravel AI's conversation tables (see [Human Tool Approval](#human-tool-approval)). To turn it off:
+
+```php
+'ask_user' => ['enabled' => false],
+```
 
 ---
 

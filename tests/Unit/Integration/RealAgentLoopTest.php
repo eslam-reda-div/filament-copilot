@@ -11,6 +11,7 @@ use EslamRedaDiv\FilamentCopilot\Models\CopilotToolCall;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\RateLimitService;
 use EslamRedaDiv\FilamentCopilot\Services\ToolRegistry;
+use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\AiServiceProvider;
 use Laravel\Ai\Concerns\InteractsWithApprovals;
@@ -244,4 +245,37 @@ it('feeds a rejection back to the model without running the tool', function () {
         ->toContain('tool_result')
         ->and(RealLoopEchoTool::$runs)->toBe(0)
         ->and(CopilotToolCall::query()->where('provider_id', 'call-1')->sole()->status)->toBe(ToolCallStatus::Rejected);
+})->skip(fn () => ! fakeCanResumeApprovals(), 'laravel/ai 0.x fakes cannot resume approvals.');
+
+it('pauses on a clarifying question through the real loop', function () {
+    realLoopTools([new AskUserTool]);
+    fakeToolCallThenReply(new ToolCall('q-1', 'ask_user', ['question' => 'Which order?', 'options' => ['#41', '#42']]), 'Order #42 is paid.');
+
+    $events = copilotTestParseSse(copilotTestRunStream(['message' => 'Is my order paid?']));
+
+    $pause = collect($events)->firstWhere(0, 'tool_approval_request');
+    expect($pause)->not->toBeNull()
+        ->and($pause[1]['approvals'][0]['question'])->toBe('Which order?')
+        ->and($pause[1]['approvals'][0]['options'])->toBe(['#41', '#42'])
+        ->and(collect($events)->where(0, 'chunk')->map(fn ($event) => $event[1]['text'])->implode(''))->toBe('Which order?')
+        ->and(array_column($events, 0))->not->toContain('error')->not->toContain('tool_call');
+});
+
+it('answers a clarifying question and continues the turn through the real loop', function () {
+    realLoopTools([new AskUserTool]);
+    fakeToolCallThenReply(new ToolCall('q-1', 'ask_user', ['question' => 'Which order?', 'options' => ['#41', '#42']]), 'Order #42 is paid.');
+
+    copilotTestRunStream(['message' => 'Is my order paid?']);
+    $conversation = CopilotConversation::query()->sole();
+
+    $events = copilotTestParseSse(copilotTestRunStream([
+        'conversation_id' => $conversation->id,
+        'decisions' => ['q-1' => ['action' => 'answer', 'answer' => '#42']],
+    ]));
+
+    expect(array_column($events, 0))->not->toContain('error')
+        ->and(collect($events)->where(0, 'chunk')->map(fn ($event) => $event[1]['text'])->implode(''))->toBe('Order #42 is paid.');
+
+    expect(CopilotToolCall::query()->where('provider_id', 'q-1')->sole()->tool_output)->toBe('The user answered: #42')
+        ->and($conversation->messages()->where('role', MessageRole::User)->pluck('content')->all())->toBe(['Is my order paid?', '#42']);
 })->skip(fn () => ! fakeCanResumeApprovals(), 'laravel/ai 0.x fakes cannot resume approvals.');
