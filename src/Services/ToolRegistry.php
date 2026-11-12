@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EslamRedaDiv\FilamentCopilot\Services;
 
 use Closure;
+use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use EslamRedaDiv\FilamentCopilot\Tools\BaseTool;
 use EslamRedaDiv\FilamentCopilot\Tools\GetToolsTool;
 use EslamRedaDiv\FilamentCopilot\Tools\ListPagesTool;
@@ -63,7 +64,13 @@ class ToolRegistry
 
         $tools = [];
 
-        foreach (array_merge($this->toolClasses, $this->globalTools, $pluginTools) as $entry) {
+        $builtIn = $this->toolClasses;
+
+        if (config('filament-copilot.ask_user.enabled', true)) {
+            $builtIn[] = AskUserTool::class;
+        }
+
+        foreach (array_merge($builtIn, $this->globalTools, $pluginTools) as $entry) {
             foreach ($this->resolveTools($entry) as $tool) {
                 if ($tool instanceof BaseTool) {
                     $tool->forPanel($panelId)

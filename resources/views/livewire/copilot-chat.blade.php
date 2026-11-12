@@ -9,6 +9,18 @@
     pendingComplete: false,
     pendingApprovals: [],
     toolCalls: [],
+    // Reasoning streamed before the answer (reasoning models).
+    reasoning: '',
+    isThinking: false,
+    showReasoning: false,
+    // ask_user pauses are questions for the user; every other pause is a
+    // tool call awaiting approval.
+    get questions() {
+        return this.pendingApprovals.filter(approval => approval.tool === 'ask_user');
+    },
+    get approvals() {
+        return this.pendingApprovals.filter(approval => approval.tool !== 'ask_user');
+    },
     _cleanups: [],
     _abortController: null,
     _pendingNavigateUrl: null,
@@ -51,7 +63,14 @@
 
         this._cleanups.push(
             Livewire.on('copilot-send-stream', (data) => {
-                this.startStreaming(data[0] || data);
+                const payload = data[0] || data;
+                // While the copilot is waiting on a question, whatever the
+                // user sends is their answer to it.
+                if (this.questions.length && payload.message) {
+                    this.answerQuestion(payload.message);
+                    return;
+                }
+                this.startStreaming(payload);
             })
         );
 
@@ -128,6 +147,9 @@
         this.toolCalls = [];
         this.pendingApprovals = [];
         this.pendingComplete = false;
+        this.reasoning = '';
+        this.isThinking = false;
+        this.showReasoning = false;
 
         try {
             const response = await fetch(params.streamUrl, {
@@ -190,6 +212,14 @@
                                     this.streamedContent += data.text;
                                     this.$nextTick(() => this.scrollToBottom());
                                     break;
+                                case 'reasoning':
+                                    // Shown as 'Thinking…' until the answer starts.
+                                    this.isThinking = true;
+                                    this.reasoning += data.text || '';
+                                    break;
+                                case 'notice':
+                                    $wire.dispatchSelf('copilot-stream-notice', { message: data.message });
+                                    break;
                                 case 'tool_call':
                                     this.toolCalls.push({
                                         id: data.tool_id,
@@ -215,7 +245,8 @@
                                 break;
                                 case 'tool_approval_request':
                                     this.pendingApprovals = data.approvals || [];
-                                    this.pendingApprovals.forEach(approval => {
+                                    // Questions are streamed as text and get their own card.
+                                    this.approvals.forEach(approval => {
                                         const tool = this.toolCalls.find(t => t.id === approval.id);
                                         if (tool) {
                                             tool.status = 'awaiting_approval';
@@ -316,13 +347,10 @@
             this.toolCalls = [];
         }
     },
-    submitApprovals(action) {
-        if (this.isStreaming || !this.pendingApprovals.length) return;
-
-        const decisions = {};
-        this.pendingApprovals.forEach(approval => {
-            decisions[approval.id] = { action };
-        });
+    // Every pending call needs a decision when the paused turn resumes;
+    // anything left undecided would be rejected by the SDK anyway, so it is
+    // rejected explicitly with a reason the model can act on.
+    resumeWith(decisions) {
         this.startStreaming({
             message: null,
             decisions,
@@ -334,6 +362,49 @@
             streamUrl: @js(route('filament-copilot.stream')),
             csrfToken: @js(csrf_token()),
         });
+    },
+    submitApprovals(action) {
+        if (this.isStreaming || !this.approvals.length) return;
+
+        const decisions = {};
+        this.approvals.forEach(approval => {
+            decisions[approval.id] = { action };
+        });
+        this.questions.forEach(question => {
+            decisions[question.id] = { action: 'reject', result: 'The user did not answer the question.' };
+        });
+        this.resumeWith(decisions);
+    },
+    answerQuestion(answer) {
+        answer = (answer || '').trim();
+        if (this.isStreaming || !this.questions.length || !answer) return;
+
+        const decisions = {};
+        this.questions.forEach((question, index) => {
+            decisions[question.id] = index === 0
+                ? { action: 'answer', answer }
+                : { action: 'reject', result: 'Ask one question at a time; the user answered the previous one.' };
+        });
+        this.approvals.forEach(approval => {
+            decisions[approval.id] = { action: 'reject', result: 'The user answered your question instead of approving this. Ask for approval again if it is still needed.' };
+        });
+        this.resumeWith(decisions);
+    },
+    // An option is sent like a typed message, so it shows up as the user's
+    // reply in the transcript and is routed to answerQuestion().
+    chooseOption(option) {
+        if (this.isStreaming || !option) return;
+        $wire.message = option;
+        $wire.sendMessage();
+    },
+    skipQuestion() {
+        if (this.isStreaming || !this.questions.length) return;
+
+        const decisions = {};
+        this.questions.forEach(question => {
+            decisions[question.id] = { action: 'reject', result: 'The user skipped the question.' };
+        });
+        this.resumeWith(decisions);
     }
 }" x-cloak @copilot-open.window="open = true" @copilot-close-sidebar.window="sidebarOpen = false"
     @copilot-load-conversation.window="sidebarOpen = false" @keydown.escape.window="if(open) open = false">
@@ -582,14 +653,46 @@
                     </div>
                 </template>
 
+                {{-- Clarifying question (ask_user). The question itself is part of the reply
+                     above; the card offers its answers. Typing in the input answers it too. --}}
+                <div x-show="questions.length && !isStreaming" x-cloak data-copilot-question-card
+                    class="mx-1 rounded-xl border border-primary-200 bg-primary-50 p-3 dark:border-primary-800 dark:bg-primary-950/30">
+                    <div class="flex items-center gap-2 text-sm font-medium text-primary-700 dark:text-primary-300">
+                        <x-filament::icon icon="heroicon-o-chat-bubble-left-ellipsis" class="h-4 w-4" />
+                        <span>{{ __('filament-copilot::filament-copilot.question_from_copilot') }}</span>
+                    </div>
+                    <template x-for="question in questions.slice(0, 1)" :key="question.id">
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line"
+                                x-text="question.question || question.reason"></p>
+                            <div class="mt-2 flex flex-wrap gap-2" x-show="(question.options || []).length">
+                                <template x-for="option in (question.options || [])" :key="option">
+                                    <x-filament::button type="button" size="sm" color="primary" outlined
+                                        x-on:click="chooseOption(option)" x-bind:disabled="isStreaming">
+                                        <span x-text="option"></span>
+                                    </x-filament::button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <div class="mt-2 flex items-center justify-between gap-2">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ __('filament-copilot::filament-copilot.question_answer_hint') }}</p>
+                        <x-filament::link tag="button" type="button" size="sm" color="gray"
+                            x-show="!approvals.length" x-on:click="skipQuestion()">
+                            {{ __('filament-copilot::filament-copilot.skip_question') }}
+                        </x-filament::link>
+                    </div>
+                </div>
+
                 {{-- Human approval requests --}}
-                <div x-show="pendingApprovals.length" x-cloak
+                <div x-show="approvals.length" x-cloak
                     class="mx-1 rounded-xl border border-warning-200 bg-warning-50 p-3 dark:border-warning-800 dark:bg-warning-950/30">
                     <div class="flex items-center gap-2 text-sm font-medium text-warning-700 dark:text-warning-300">
                         <x-filament::icon icon="heroicon-o-shield-exclamation" class="h-4 w-4" />
                         <span>{{ __('filament-copilot::filament-copilot.approval_required') }}</span>
                     </div>
-                    <template x-for="approval in pendingApprovals" :key="approval.id">
+                    <template x-for="approval in approvals" :key="approval.id">
                         <div class="mt-2 text-xs text-warning-800 dark:text-warning-200">
                             <div class="font-medium" x-text="approval.tool"></div>
                             <div x-show="approval.reason" x-text="approval.reason"></div>
@@ -651,22 +754,31 @@
                     </div>
                 </div>
 
-                {{-- Streaming bouncing dots (before first chunk arrives) --}}
+                {{-- Streaming bouncing dots (before first chunk arrives). Reasoning models
+                     report "Thinking…" (and, optionally, their reasoning) meanwhile. --}}
                 <template x-if="isStreaming && !streamedContent">
-                    <div class="flex items-start gap-2.5">
+                    <div class="flex items-start gap-2.5" data-copilot-thinking>
                         <div
                             class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0 mt-0.5">
                             <x-filament::icon icon="heroicon-o-sparkles"
                                 class="w-4 h-4 text-primary-600 dark:text-primary-400" />
                         </div>
-                        <div
-                            class="flex items-center gap-1.5 py-2.5 px-3.5 bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-md">
-                            <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
-                                style="animation-delay: 0ms"></span>
-                            <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
-                                style="animation-delay: 150ms"></span>
-                            <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
-                                style="animation-delay: 300ms"></span>
+                        <div class="min-w-0 max-w-[85%] py-2.5 px-3.5 bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-md">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                                    style="animation-delay: 0ms"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                                    style="animation-delay: 150ms"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
+                                    style="animation-delay: 300ms"></span>
+                                <span x-show="isThinking" class="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ __('filament-copilot::filament-copilot.thinking') }}</span>
+                                <button x-show="reasoning" type="button" x-on:click="showReasoning = !showReasoning"
+                                    class="ml-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                                    x-text="showReasoning ? @js(__('filament-copilot::filament-copilot.hide_reasoning')) : @js(__('filament-copilot::filament-copilot.show_reasoning'))"></button>
+                            </div>
+                            <p x-show="showReasoning && reasoning" x-text="reasoning"
+                                class="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400"></p>
                         </div>
                     </div>
                 </template>
@@ -681,6 +793,7 @@
                 <textarea wire:model="message" @keydown="handleKeydown($event)" @input="autoResize($event.target)" rows="1"
                     class="copilot-textarea flex-1 resize-none bg-transparent text-sm text-gray-900 dark:text-white py-1 px-2 border-none shadow-none outline-none placeholder-gray-400 dark:placeholder-gray-500"
                     style="max-height: 120px" placeholder="{{ __('filament-copilot::filament-copilot.input_placeholder') }}"
+                    x-bind:placeholder="questions.length ? @js(__('filament-copilot::filament-copilot.answer_placeholder')) : @js(__('filament-copilot::filament-copilot.input_placeholder'))"
                     :disabled="$wire.isLoading || isStreaming"></textarea>
                 <button type="submit"
                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600 hover:bg-primary-500 active:bg-primary-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"

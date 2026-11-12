@@ -104,6 +104,17 @@ class CopilotAgent implements Agent, Conversational, HasMiddleware, HasTools
         return $this->tools;
     }
 
+    /**
+     * The provider request timeout (laravel/ai calls this when no explicit
+     * timeout is passed). Without it the SDK's 60 second default applied and
+     * the `agent.timeout` setting had no effect, cutting off slow reasoning
+     * models mid-answer.
+     */
+    public function timeout(): int
+    {
+        return max(1, (int) config('filament-copilot.agent.timeout', 120));
+    }
+
     public function middleware(): array
     {
         return [

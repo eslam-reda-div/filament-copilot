@@ -58,6 +58,14 @@ return [
 
     // Ask User
     'question_from_copilot' => 'Copilot needs your input:',
+    'question_answer_hint' => 'Pick an answer, or type your own below.',
+    'answer_placeholder' => 'Type your answer…',
+    'skip_question' => 'Skip',
+    'thinking' => 'Thinking…',
+    'show_reasoning' => 'Show reasoning',
+    'hide_reasoning' => 'Hide reasoning',
+    'empty_response' => "The assistant didn't return a response. Please try again, or rephrase your message.",
+    'unknown_tool' => 'The assistant tried to use a tool that is not available (:tool). Please try again. (ref: :ref)',
     'approve' => 'Approve',
     'reject' => 'Reject',
     'respond' => 'Respond',

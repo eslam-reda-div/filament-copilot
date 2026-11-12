@@ -58,6 +58,14 @@ return [
 
     // Ask User
     'question_from_copilot' => 'Der Copilot braucht deine Eingabe:',
+    'question_answer_hint' => 'Wähle eine Antwort oder schreib unten deine eigene.',
+    'answer_placeholder' => 'Deine Antwort …',
+    'skip_question' => 'Überspringen',
+    'thinking' => 'Denkt nach …',
+    'show_reasoning' => 'Gedankengang anzeigen',
+    'hide_reasoning' => 'Gedankengang ausblenden',
+    'empty_response' => 'Der Assistent hat keine Antwort geliefert. Bitte versuche es erneut oder formuliere deine Nachricht um.',
+    'unknown_tool' => 'Der Assistent wollte ein Werkzeug verwenden, das nicht verfügbar ist (:tool). Bitte versuche es erneut. (Ref.: :ref)',
     'approve' => 'Genehmigen',
     'reject' => 'Ablehnen',
     'respond' => 'Antworten',

@@ -6,9 +6,9 @@ it('builds default tools', function () {
     $user = createTestUser();
     $registry = app(ToolRegistry::class);
     $tools = $registry->buildTools('admin', $user);
-    // Should have the 7 built-in global tools
+    // The 7 built-in global tools, plus ask_user (on by default)
     expect($tools)->toBeArray()
-        ->and(count($tools))->toBe(7);
+        ->and(count($tools))->toBe(8);
 });
 
 it('accepts global custom tools', function () {
@@ -29,7 +29,7 @@ it('accepts tool instances', function () {
     $registry->registerGlobal($instance);
     $tools = $registry->buildTools('admin', $user);
 
-    expect(count($tools))->toBe(8)
+    expect(count($tools))->toBe(9)
         ->and($tools)->toContain($instance);
 });
 
@@ -45,7 +45,7 @@ it('accepts closures returning a single tool', function () {
     $registry->registerGlobal(fn () => $instance);
     $tools = $registry->buildTools('admin', $user);
 
-    expect(count($tools))->toBe(8)
+    expect(count($tools))->toBe(9)
         ->and($tools)->toContain($instance);
 });
 
@@ -65,7 +65,7 @@ it('accepts closures returning an iterable of tools', function () {
     $registry->registerGlobal(fn () => [$first, $second]);
     $tools = $registry->buildTools('admin', $user);
 
-    expect(count($tools))->toBe(9)
+    expect(count($tools))->toBe(10)
         ->and($tools)->toContain($first)
         ->and($tools)->toContain($second);
 });
@@ -77,7 +77,7 @@ it('skips closures resolving to null', function () {
     $registry->registerGlobal(fn () => null);
     $tools = $registry->buildTools('admin', $user);
 
-    expect(count($tools))->toBe(7);
+    expect(count($tools))->toBe(8);
 });
 
 it('re-invokes closures on every build', function () {
