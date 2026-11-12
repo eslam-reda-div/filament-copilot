@@ -16,6 +16,7 @@ use EslamRedaDiv\FilamentCopilot\Models\CopilotToolCall;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\RateLimitService;
 use EslamRedaDiv\FilamentCopilot\Services\ToolRegistry;
+use EslamRedaDiv\FilamentCopilot\Support\TokenUsage;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -183,6 +184,13 @@ class StreamController
 
                 // Stream real-time chunks from the AI provider
                 foreach ($streamResponse as $event) {
+                    // laravel/ai 1.x streams a sub-agent's progress as
+                    // preliminary results before the tool's final one; only
+                    // the final result is shown and logged.
+                    if ($event instanceof \Laravel\Ai\Streaming\Events\ToolResult && ($event->preliminary ?? false)) {
+                        continue;
+                    }
+
                     if ($event instanceof \Laravel\Ai\Streaming\Events\TextDelta) {
                         $delta = $event->delta;
 
@@ -327,8 +335,8 @@ class StreamController
                 $assistantMessage = $conversationManager->addAssistantMessage(
                     conversation: $conversation,
                     content: $responseText,
-                    inputTokens: $usage->promptTokens ?? 0,
-                    outputTokens: $usage->completionTokens ?? 0,
+                    inputTokens: TokenUsage::input($usage),
+                    outputTokens: TokenUsage::output($usage),
                     metadata: $pendingApprovals !== [] ? ['pending_approvals' => $pendingApprovals] : null,
                 );
 
@@ -337,8 +345,8 @@ class StreamController
                     $rateLimitService->recordTokenUsage(
                         user: $user,
                         panelId: $panelId,
-                        inputTokens: $usage->promptTokens ?? 0,
-                        outputTokens: $usage->completionTokens ?? 0,
+                        inputTokens: TokenUsage::input($usage),
+                        outputTokens: TokenUsage::output($usage),
                         tenant: $tenant,
                         conversationId: $conversation->id,
                         model: $model,
@@ -349,13 +357,13 @@ class StreamController
                 event(new CopilotResponseReceived(
                     $conversation,
                     $assistantMessage,
-                    $usage->promptTokens ?? 0,
-                    $usage->completionTokens ?? 0,
+                    TokenUsage::input($usage),
+                    TokenUsage::output($usage),
                 ));
 
                 $this->sendSseEvent('usage', [
-                    'input_tokens' => $usage->promptTokens ?? 0,
-                    'output_tokens' => $usage->completionTokens ?? 0,
+                    'input_tokens' => TokenUsage::input($usage),
+                    'output_tokens' => TokenUsage::output($usage),
                 ]);
 
                 // The persisted assistant message id lets the chat component

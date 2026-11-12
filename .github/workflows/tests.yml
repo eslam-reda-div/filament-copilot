@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }} · laravel/ai ${{ matrix.laravel-ai }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+        laravel-ai: ['0.10.*', '0.11.*', '^1.0']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_sqlite, sqlite3, intl, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        # --with pins laravel/ai for this run without rewriting composer.json.
+        run: composer update --prefer-dist --no-interaction --no-progress --with-all-dependencies --with "laravel/ai:${{ matrix.laravel-ai }}"
+
+      - name: Show laravel/ai version
+        run: composer show laravel/ai | grep -E '^versions'
+
+      - name: Run tests
+        run: vendor/bin/pest --parallel
