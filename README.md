@@ -136,10 +136,25 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
 | Laravel                      | 11.x / 12.x                   |
 | Filament                     | ^5.0                          |
 | Livewire                     | ^3.5 (ships with Filament v5) |
-| Laravel AI SDK               | ^0.10.0 || ^0.11.0            |
+| Laravel AI SDK               | ^0.10 \|\| ^0.11 \|\| ^1.0    |
 | Spatie Laravel Package Tools | ^1.16                         |
 
 > **Note:** This package is built for **Filament v5** and **Livewire 3.5+** (as bundled with Filament v5). It leverages the official **Laravel AI SDK** (`laravel/ai`) for all AI operations.
+
+### Upgrading to Laravel AI 1.0
+
+The package works with Laravel AI `^0.10`, `^0.11` and `^1.0` without code changes on your side. To move your app to Laravel AI 1.0:
+
+```bash
+composer require laravel/ai:^1.0 -W
+```
+
+Laravel AI 1.0 changes the schema of its own conversation tables: `steps` and `status` replace `tool_calls`, `tool_results` and `approval_state`. If you published and ran those migrations before (`filament-copilot-ai-migrations`), add the backfill migration from the [Laravel AI 1.0 upgrade guide](https://github.com/laravel/ai/blob/1.x/UPGRADE.md#conversation-messages-now-store-steps) and run `php artisan migrate` **before** deploying. Approve or reject any approval that is still pending first: turns paused under 0.x can't be resumed once their `approval_state` is migrated.
+
+Notes:
+
+- **Token counts.** On 1.0, tracked token usage includes cached and reasoning tokens. The SDK now reports these in its totals, so per-turn counts can be higher than on 0.x.
+- **Laravel MCP.** If your app also requires `laravel/mcp` directly, Laravel AI 1.0 needs `laravel/mcp:^1.0`.
 
 ---
 

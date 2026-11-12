@@ -81,7 +81,7 @@ function fakeTextOnlyAgent(string $reply): void
         invocationId: 'invocation-1',
         generator: function () use ($reply, $timestamp) {
             yield new TextDelta('event-1', 'assistant-message-1', $reply, $timestamp);
-            yield new StreamEnd('event-2', 'stop', new Usage(promptTokens: 5, completionTokens: 7), $timestamp + 1);
+            yield new StreamEnd('event-2', 'stop', copilotTestUsage(5, 7), $timestamp + 1);
         },
         meta: new Meta(provider: 'openai', model: 'gpt-4o'),
     );
