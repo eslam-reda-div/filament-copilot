@@ -9,6 +9,7 @@ return [
     'send' => 'Send',
     'loading' => 'Loading',
     'new_line' => 'new line',
+    'hint_send' => 'send',
     'cancel' => 'Cancel',
     'confirm' => 'Confirm',
     'save' => 'Save',
@@ -33,6 +34,15 @@ return [
     'rate_limit_exceeded' => 'You have exceeded the rate limit. Please try again later.',
     'error_occurred' => 'An error occurred',
     'stream_error' => 'Something went wrong. Please try again. (ref: :ref)',
+    'conversation_not_found' => 'Conversation not found.',
+    'conversation_cannot_be_resumed' => 'This conversation cannot be resumed.',
+
+    // Tool Calls
+    'tool' => 'Tool',
+    'tool_arguments' => 'Arguments',
+    'tool_result' => 'Result',
+    'tool_error' => 'Error',
+    'tool_execution_failed' => 'Tool execution failed.',
 
     // Message Feedback
     'feedback_helpful' => 'Helpful',
@@ -52,6 +62,7 @@ return [
     'reject' => 'Reject',
     'respond' => 'Respond',
     'user_approval_required' => 'Your approval is required before this action can proceed.',
+    'approval_required' => 'Approval required',
 
     // Navigation & Resources
     'dashboard' => 'Copilot Dashboard',
@@ -105,6 +116,16 @@ return [
     'blocked_reason' => 'Blocked Reason',
     'block' => 'Block',
     'unblock' => 'Unblock',
+    'blocked_by_admin' => 'Blocked by admin',
+
+    // Conversation Export
+    'export_you' => 'You',
+    'export_copilot' => 'Copilot',
+    'export_system' => 'System',
+    'export_tool' => 'Tool',
+    'export_date' => 'Date',
+    'export_panel' => 'Panel',
+    'export_total_tokens' => 'Total tokens used: :count',
 
     // Dashboard Widgets
     'total_conversations' => 'Total Conversations',

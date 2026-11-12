@@ -13,7 +13,9 @@ use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\ExportService;
 use EslamRedaDiv\FilamentCopilot\Services\RateLimitService;
 use EslamRedaDiv\FilamentCopilot\Services\ToolRegistry;
+use EslamRedaDiv\FilamentCopilot\Translation\EnglishFallbackLoader;
 use Filament\Support\Assets\Css;
+use Illuminate\Contracts\Translation\Loader;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Livewire\Livewire;
@@ -42,6 +44,17 @@ class FilamentCopilotServiceProvider extends PackageServiceProvider
         $this->app->singleton(ConversationManager::class);
         $this->app->singleton(ToolRegistry::class);
         $this->app->singleton(ExportService::class);
+
+        // Fall back to the package's English strings instead of rendering raw
+        // translation keys when neither the current nor the app's fallback
+        // locale ships them.
+        $this->app->extend('translation.loader', fn (Loader $loader, $app) => $loader instanceof EnglishFallbackLoader
+            ? $loader
+            : new EnglishFallbackLoader(
+                $loader,
+                static::$name,
+                fn (): ?string => $app['config']->get('app.fallback_locale'),
+            ));
     }
 
     public function packageBooted(): void

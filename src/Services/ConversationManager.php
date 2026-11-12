@@ -154,7 +154,7 @@ class ConversationManager
                         'arguments' => $toolCall->tool_input,
                         'result' => $toolCall->tool_output,
                         'success' => ! $isFailed && $toolCall->status !== ToolCallStatus::Rejected,
-                        'error' => $isFailed ? ($toolCall->tool_output ?: 'Tool execution failed.') : null,
+                        'error' => $isFailed ? ($toolCall->tool_output ?: __('filament-copilot::filament-copilot.tool_execution_failed')) : null,
                         'content' => $toolCall->tool_output ?? '',
                         'status' => $toolCall->status->value,
                         'requires_approval' => (bool) $toolCall->requires_approval,

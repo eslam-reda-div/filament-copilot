@@ -84,7 +84,7 @@ class StreamController
 
             if (! $conversation) {
                 return $this->sseResponse(function () {
-                    $this->sendSseEvent('error', ['message' => 'Conversation not found.']);
+                    $this->sendSseEvent('error', ['message' => __('filament-copilot::filament-copilot.conversation_not_found')]);
                     $this->sendSseEvent('done', []);
                 });
             }
@@ -99,7 +99,7 @@ class StreamController
             event(new CopilotMessageSent($conversation, $content, $panelId));
         } elseif (! ($conversation->metadata['ai_conversation_id'] ?? null)) {
             return $this->sseResponse(function () {
-                $this->sendSseEvent('error', ['message' => 'This conversation cannot be resumed.']);
+                $this->sendSseEvent('error', ['message' => __('filament-copilot::filament-copilot.conversation_cannot_be_resumed')]);
                 $this->sendSseEvent('done', []);
             });
         }

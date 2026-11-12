@@ -122,7 +122,7 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
 - **8 Supported AI Providers** — OpenAI, Anthropic, Google Gemini, Groq, xAI, DeepSeek, Mistral, and Ollama (local models).
 - **Keyboard Shortcut** — Open the copilot with `Ctrl+Shift+K` from anywhere in your panel.
 - **Authorization Aware** — Respects Filament's authorization policies out of the box.
-- **Fully Translatable** — All UI strings are translatable with a complete English language file (100+ keys).
+- **Fully Translatable** — Every UI string goes through the language files. Ships with English and German, and falls back to English instead of showing raw translation keys.
 - **Publishable Assets, Config, Views, Stubs** — Customize everything to fit your needs.
 - **121 Tests** — Comprehensive test suite covering models, services, tools, Livewire components, views, discovery, enums, config, plugin, and streaming.
 
@@ -891,7 +891,11 @@ Publish the translation files to customize all UI strings:
 php artisan vendor:publish --tag=filament-copilot-translations
 ```
 
-The package ships with a complete English translation file containing 100+ keys.
+The package ships with **English** (`en`) and **German** (`de`) translations. They are picked up automatically from your app locale.
+
+If neither the current locale nor your `app.fallback_locale` has a package string, it falls back to the English line. You never see a raw `filament-copilot::filament-copilot.*` key, whatever your fallback locale is.
+
+To add a language, publish the files and copy `lang/vendor/filament-copilot/en` to your locale code (for example `lang/vendor/filament-copilot/fr/filament-copilot.php`). Any key you leave out still renders in English. Contributions of new locales are welcome.
 
 ### Views
 

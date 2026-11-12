@@ -385,7 +385,7 @@
                 </button>
                 <button @click="open = false" type="button"
                     class="fi-icon-btn fi-modal-close-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 hover:bg-gray-500/5 dark:hover:bg-gray-400/5 fi-color-gray w-8 h-8"
-                    title="{{ __('filament-copilot::filament-copilot.close') ?? 'Close' }}">
+                    title="{{ __('filament-copilot::filament-copilot.close') }}">
                     <x-filament::icon icon="heroicon-o-x-mark" class="w-5 h-5 text-gray-400 dark:text-gray-400" />
                 </button>
             </div>
@@ -555,7 +555,7 @@
                                 <template x-if="tool.arguments">
                                     <div class="mb-1">
                                         <span
-                                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Arguments</span>
+                                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_arguments') }}</span>
                                         <pre class="text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all mt-0.5 max-h-24 overflow-y-auto"
                                             x-text="JSON.stringify(tool.arguments, null, 2)"></pre>
                                     </div>
@@ -563,7 +563,7 @@
                                 <template x-if="tool.result">
                                     <div>
                                         <span
-                                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Result</span>
+                                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_result') }}</span>
                                         <pre class="text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all mt-0.5 max-h-24 overflow-y-auto"
                                             x-text="tool.result"></pre>
                                     </div>
@@ -571,7 +571,7 @@
                                 <template x-if="tool.error">
                                     <div>
                                         <span
-                                            class="text-[10px] font-semibold text-danger-500 uppercase tracking-wider">Error</span>
+                                            class="text-[10px] font-semibold text-danger-500 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_error') }}</span>
                                         <p class="text-xs text-danger-600 dark:text-danger-400 mt-0.5"
                                             x-text="tool.error">
                                         </p>
@@ -587,7 +587,7 @@
                     class="mx-1 rounded-xl border border-warning-200 bg-warning-50 p-3 dark:border-warning-800 dark:bg-warning-950/30">
                     <div class="flex items-center gap-2 text-sm font-medium text-warning-700 dark:text-warning-300">
                         <x-filament::icon icon="heroicon-o-shield-exclamation" class="h-4 w-4" />
-                        <span>Approval required</span>
+                        <span>{{ __('filament-copilot::filament-copilot.approval_required') }}</span>
                     </div>
                     <template x-for="approval in pendingApprovals" :key="approval.id">
                         <div class="mt-2 text-xs text-warning-800 dark:text-warning-200">
@@ -597,15 +597,20 @@
                                 x-text="JSON.stringify(approval.arguments, null, 2)"></pre>
                         </div>
                     </template>
-                    <div class="mt-3 flex gap-2">
-                        <button type="button" @click="submitApprovals('approve')"
-                            class="rounded-lg bg-success-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-success-500">
-                            Approve
-                        </button>
-                        <button type="button" @click="submitApprovals('reject')"
-                            class="rounded-lg bg-danger-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-danger-500">
-                            Reject
-                        </button>
+                    {{-- Filament's own buttons: styled by Filament's compiled CSS and the
+                         panel theme, so they stay readable in light and dark mode without
+                         depending on utility classes being present in any stylesheet. --}}
+                    <div class="mt-3 flex flex-wrap gap-2" data-copilot-approval-actions>
+                        <x-filament::button type="button" size="sm" color="success"
+                            icon="heroicon-m-check" x-on:click="submitApprovals('approve')"
+                            x-bind:disabled="isStreaming">
+                            {{ __('filament-copilot::filament-copilot.approve') }}
+                        </x-filament::button>
+                        <x-filament::button type="button" size="sm" color="danger" outlined
+                            icon="heroicon-m-x-mark" x-on:click="submitApprovals('reject')"
+                            x-bind:disabled="isStreaming">
+                            {{ __('filament-copilot::filament-copilot.reject') }}
+                        </x-filament::button>
                     </div>
                 </div>
 
@@ -701,10 +706,10 @@
                 <span class="text-[10px] text-gray-400 dark:text-gray-400">
                     <kbd
                         class="px-1 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-mono text-[10px]">Enter</kbd>
-                    send &middot;
+                    {{ __('filament-copilot::filament-copilot.hint_send') }} &middot;
                     <kbd
                         class="px-1 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-mono text-[10px]">Shift+Enter</kbd>
-                    new line
+                    {{ __('filament-copilot::filament-copilot.new_line') }}
                 </span>
             </div>
         </div>
