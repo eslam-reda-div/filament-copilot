@@ -23,20 +23,42 @@
         $isSuccess = $msg['success'] ?? true;
         $hasResult = !empty($msg['result']);
         $hasError = !empty($msg['error']);
+        $toolStatus = $msg['status'] ?? null;
+        // awaiting: paused on a human approval that has not been decided yet.
+        $toolState = match (true) {
+            $toolStatus === 'pending' && ($msg['requires_approval'] ?? false) => 'awaiting',
+            $toolStatus === 'rejected' => 'rejected',
+            $hasError => 'error',
+            default => 'done',
+        };
+        $toolHeaderClasses = match ($toolState) {
+            'awaiting' => 'bg-warning-50 dark:bg-warning-900/10 border-warning-200 dark:border-warning-800 hover:bg-warning-100 dark:hover:bg-warning-900/20',
+            'rejected', 'error' => 'bg-danger-50 dark:bg-danger-900/10 border-danger-200 dark:border-danger-800 hover:bg-danger-100 dark:hover:bg-danger-900/20',
+            default => 'bg-success-50 dark:bg-success-900/10 border-success-200 dark:border-success-800 hover:bg-success-100 dark:hover:bg-success-900/20',
+        };
+        $toolPanelClasses = match ($toolState) {
+            'awaiting' => 'bg-warning-50/50 dark:bg-warning-900/5 border-warning-200 dark:border-warning-800',
+            'rejected', 'error' => 'bg-danger-50/50 dark:bg-danger-900/5 border-danger-200 dark:border-danger-800',
+            default => 'bg-success-50/50 dark:bg-success-900/5 border-success-200 dark:border-success-800',
+        };
     @endphp
-    <div class="flex items-start gap-2.5">
+    <div class="flex items-start gap-2.5" data-tool-state="{{ $toolState }}">
         <div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 mt-0.5">
             <x-filament::icon icon="heroicon-o-wrench-screwdriver" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
         </div>
         <div class="min-w-0 max-w-[85%] w-full" x-data="{ open: false }">
             <button @click="open = !open" type="button"
-                class="flex items-center gap-2 px-3 py-2 w-full rounded-t-xl border transition-colors {{ $hasError ? 'bg-danger-50 dark:bg-danger-900/10 border-danger-200 dark:border-danger-800 hover:bg-danger-100 dark:hover:bg-danger-900/20' : 'bg-success-50 dark:bg-success-900/10 border-success-200 dark:border-success-800 hover:bg-success-100 dark:hover:bg-success-900/20' }}"
+                class="flex items-center gap-2 px-3 py-2 w-full rounded-t-xl border transition-colors {{ $toolHeaderClasses }}"
                 :class="{ 'rounded-b-xl': !open }">
                 <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 transition-transform duration-200" :class="{ 'rotate-90': open }"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-                @if ($hasError)
+                @if ($toolState === 'awaiting')
+                    <x-filament::icon icon="heroicon-o-shield-exclamation" class="w-3.5 h-3.5 text-warning-500" />
+                @elseif ($toolState === 'rejected')
+                    <x-filament::icon icon="heroicon-o-no-symbol" class="w-3.5 h-3.5 text-danger-500" />
+                @elseif ($hasError)
                     <x-filament::icon icon="heroicon-o-x-circle" class="w-3.5 h-3.5 text-danger-500" />
                 @else
                     <x-filament::icon icon="heroicon-o-check-circle" class="w-3.5 h-3.5 text-success-500" />
@@ -44,7 +66,7 @@
                 <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ $toolName }}</span>
             </button>
             <div x-show="open" x-collapse
-                class="px-3 py-2 border border-t-0 rounded-b-xl {{ $hasError ? 'bg-danger-50/50 dark:bg-danger-900/5 border-danger-200 dark:border-danger-800' : 'bg-success-50/50 dark:bg-success-900/5 border-success-200 dark:border-success-800' }}">
+                class="px-3 py-2 border border-t-0 rounded-b-xl {{ $toolPanelClasses }}">
                 @if (!empty($msg['arguments']))
                     <div class="mb-1">
                         <span
@@ -70,6 +92,9 @@
             </div>
         </div>
     </div>
+@elseif($isAssistant && blank($msg['content'] ?? null))
+    {{-- Turns that only called tools or paused for approval store an empty
+         assistant message; don't render an empty bubble for it. --}}
 @elseif($isAssistant)
     {{-- Feedback thumbs. Only a persisted message carries an id, so the id gate
          doubles as the "is there something rateable to talk to" gate. --}}

@@ -61,6 +61,19 @@
                 this.sidebarOpen = false;
             })
         );
+
+        // Approvals a reopened conversation is still paused on (or [] when
+        // switching to a conversation that is not paused).
+        this._cleanups.push(
+            Livewire.on('copilot-approvals-restored', (data) => {
+                const payload = data[0] || data;
+                if (this.isStreaming) return;
+                this.pendingApprovals = Array.isArray(payload.approvals) ? payload.approvals : [];
+                if (this.pendingApprovals.length) {
+                    this.$nextTick(() => this.scrollToBottom());
+                }
+            })
+        );
     },
     destroy() {
         // SPA-safe: deregister all global Livewire hooks/listeners
@@ -142,6 +155,10 @@
             let buffer = '';
             let newConversationId = null;
             let assistantMessageId = null;
+            // Declared outside the read loop: an `event:` line and its `data:`
+            // line can arrive in separate network chunks, and resetting it per
+            // chunk silently dropped that event.
+            let currentEvent = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -150,8 +167,6 @@
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
                 buffer = lines.pop() || '';
-
-                let currentEvent = null;
 
                 for (const line of lines) {
                     if (line.startsWith('event: ')) {
@@ -163,6 +178,13 @@
                             switch (currentEvent) {
                                 case 'conversation':
                                     newConversationId = data.id;
+                                    // Capture the id as soon as the server knows it,
+                                    // not only on completion: a first turn that pauses
+                                    // for approval never completes, and resuming it
+                                    // needs this id.
+                                    if (data.id && !$wire.conversationId) {
+                                        $wire.conversationId = data.id;
+                                    }
                                     break;
                                 case 'chunk':
                                     this.streamedContent += data.text;
@@ -184,7 +206,7 @@
                                         (!data.tool_id && t.name === data.tool_name)
                                     );
                                     if (idx !== -1) {
-                                        this.toolCalls[idx].status = data.success ? 'done' : 'error';
+                                        this.toolCalls[idx].status = data.denied ? 'rejected' : (data.success ? 'done' : 'error');
                                         this.toolCalls[idx].result = data.result;
                                         this.toolCalls[idx].error = data.error;
                                     }
@@ -192,10 +214,23 @@
                                 this.$nextTick(() => this.scrollToBottom());
                                 break;
                                 case 'tool_approval_request':
-                                this.pendingApprovals = data.approvals || [];
-                                this.isStreaming = false;
-                                this.$nextTick(() => this.scrollToBottom());
-                                break;
+                                    this.pendingApprovals = data.approvals || [];
+                                    this.pendingApprovals.forEach(approval => {
+                                        const tool = this.toolCalls.find(t => t.id === approval.id);
+                                        if (tool) {
+                                            tool.status = 'awaiting_approval';
+                                        } else {
+                                            this.toolCalls.push({
+                                                id: approval.id,
+                                                name: approval.tool,
+                                                arguments: approval.arguments,
+                                                status: 'awaiting_approval',
+                                                result: null,
+                                            });
+                                        }
+                                    });
+                                    this.$nextTick(() => this.scrollToBottom());
+                                    break;
                                 case 'navigate':
                                     // Queue navigation URL to execute after stream completes
                                     this._pendingNavigateUrl = data.url;
@@ -224,10 +259,14 @@
 
             this._abortController = null;
 
-            if (this.pendingApprovals.length) {
-                this.isStreaming = false;
-                return;
-            } else if (this.streamedContent || this.toolCalls.length) {
+            if (newConversationId && !$wire.conversationId) {
+                $wire.conversationId = newConversationId;
+            }
+
+            if (this.streamedContent || this.toolCalls.length) {
+                // Also runs for a turn that paused for approval: the text and
+                // tool calls streamed before the pause are committed to the
+                // transcript, while the approval card (pendingApprovals) stays.
                 this.pendingComplete = true;
                 this.isStreaming = false;
 
@@ -278,6 +317,8 @@
         }
     },
     submitApprovals(action) {
+        if (this.isStreaming || !this.pendingApprovals.length) return;
+
         const decisions = {};
         this.pendingApprovals.forEach(approval => {
             decisions[approval.id] = { action };
@@ -285,7 +326,10 @@
         this.startStreaming({
             message: null,
             decisions,
-            conversationId: this.conversationId,
+            // $wire.conversationId, not this.conversationId: the Alpine
+            // component has no such property, so the resume request used to
+            // go out without an id and could never find the paused turn.
+            conversationId: $wire.conversationId,
             panelId: @js(\Filament\Facades\Filament::getCurrentPanel()?->getId()),
             streamUrl: @js(route('filament-copilot.stream')),
             csrfToken: @js(csrf_token()),
@@ -458,7 +502,9 @@
                                     'bg-success-50 dark:bg-success-900/10 border-success-200 dark:border-success-800 hover:bg-success-100 dark:hover:bg-success-900/20': tool
                                         .status === 'done',
                                     'bg-danger-50 dark:bg-danger-900/10 border-danger-200 dark:border-danger-800 hover:bg-danger-100 dark:hover:bg-danger-900/20': tool
-                                        .status === 'error',
+                                        .status === 'error' || tool.status === 'rejected',
+                                    'bg-warning-50 dark:bg-warning-900/10 border-warning-200 dark:border-warning-800 hover:bg-warning-100 dark:hover:bg-warning-900/20': tool
+                                        .status === 'awaiting_approval',
                                 }">
                                 <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 transition-transform duration-200"
                                     :class="{ 'rotate-90': toolOpen }" fill="none" viewBox="0 0 24 24"
@@ -484,6 +530,14 @@
                                     <x-filament::icon icon="heroicon-o-x-circle"
                                         class="w-3.5 h-3.5 text-danger-500" />
                                 </template>
+                                <template x-if="tool.status === 'awaiting_approval'">
+                                    <x-filament::icon icon="heroicon-o-shield-exclamation"
+                                        class="w-3.5 h-3.5 text-warning-500" />
+                                </template>
+                                <template x-if="tool.status === 'rejected'">
+                                    <x-filament::icon icon="heroicon-o-no-symbol"
+                                        class="w-3.5 h-3.5 text-danger-500" />
+                                </template>
                                 <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
                                     x-text="tool.name"></span>
                             </button>
@@ -494,7 +548,9 @@
                                     'bg-success-50/50 dark:bg-success-900/5 border-success-200 dark:border-success-800': tool
                                         .status === 'done',
                                     'bg-danger-50/50 dark:bg-danger-900/5 border-danger-200 dark:border-danger-800': tool
-                                        .status === 'error',
+                                        .status === 'error' || tool.status === 'rejected',
+                                    'bg-warning-50/50 dark:bg-warning-900/5 border-warning-200 dark:border-warning-800': tool
+                                        .status === 'awaiting_approval',
                                 }">
                                 <template x-if="tool.arguments">
                                     <div class="mb-1">

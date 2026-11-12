@@ -199,13 +199,15 @@ class StreamController
                         }
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\ToolResult) {
                         $rawResult = is_string($event->toolResult->result) ? $event->toolResult->result : json_encode($event->toolResult->result);
+                        $denied = (bool) ($event->denied ?? false);
 
                         $this->sendSseEvent('tool_result', [
                             'tool_id' => $event->toolResult->id ?? '',
                             'tool_name' => $event->toolResult->name ?? '',
                             'result' => $rawResult,
-                            'success' => $event->successful,
+                            'success' => $event->successful && ! $denied,
                             'error' => $event->error,
+                            'denied' => $denied,
                         ]);
 
                         if ($shouldLogToolCalls) {
@@ -224,8 +226,15 @@ class StreamController
                                 $toolCallsByProviderId[$providerToolCallId] = $toolCall;
                             }
 
+                            // A rejected approval still yields a (denied) tool
+                            // result; keep the Rejected status the decision
+                            // recorded instead of reporting it as executed.
                             $toolCall->update([
-                                'status' => $event->successful ? ToolCallStatus::Executed : ToolCallStatus::Failed,
+                                'status' => match (true) {
+                                    $denied || $toolCall->status === ToolCallStatus::Rejected => ToolCallStatus::Rejected,
+                                    $event->successful => ToolCallStatus::Executed,
+                                    default => ToolCallStatus::Failed,
+                                },
                                 'tool_output' => $rawResult,
                             ]);
 
@@ -239,8 +248,11 @@ class StreamController
                         foreach ($event->pendingApprovals as $approval) {
                             $pendingApprovals[] = $approval->toArray();
 
-                            if ($shouldLogToolCalls && $userMessage) {
-                                $toolCall = $toolCallsByProviderId[$approval->id] ?? $userMessage->toolCalls()
+                            // $toolCallMessage (not $userMessage) so a resumed turn
+                            // that pauses again is still logged against the user
+                            // message the turn belongs to.
+                            if ($shouldLogToolCalls && $toolCallMessage) {
+                                $toolCall = $toolCallsByProviderId[$approval->id] ?? $toolCallMessage->toolCalls()
                                     ->where('tool_name', $approval->tool)
                                     ->where('status', ToolCallStatus::Pending)
                                     ->latest()
@@ -287,12 +299,15 @@ class StreamController
                     ]);
                 }
 
-                // Store the complete message
+                // Store the complete message. A turn that paused for approval
+                // keeps its pending approvals on the message, so reopening the
+                // conversation can show the approval card again and resume it.
                 $assistantMessage = $conversationManager->addAssistantMessage(
                     conversation: $conversation,
                     content: $responseText,
                     inputTokens: $usage->promptTokens ?? 0,
                     outputTokens: $usage->completionTokens ?? 0,
+                    metadata: $pendingApprovals !== [] ? ['pending_approvals' => $pendingApprovals] : null,
                 );
 
                 // Record token usage
