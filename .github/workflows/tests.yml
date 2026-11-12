@@ -31,9 +31,8 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        run: |
-          composer require "laravel/ai:${{ matrix.laravel-ai }}" --no-update --no-interaction
-          composer update --prefer-dist --no-interaction --no-progress --with-all-dependencies
+        # --with pins laravel/ai for this run without rewriting composer.json.
+        run: composer update --prefer-dist --no-interaction --no-progress --with-all-dependencies --with "laravel/ai:${{ matrix.laravel-ai }}"
 
       - name: Show laravel/ai version
         run: composer show laravel/ai | grep -E '^versions'
