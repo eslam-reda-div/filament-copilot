@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CopilotMessage extends Model
 {
@@ -44,6 +45,14 @@ class CopilotMessage extends Model
     public function toolCalls(): HasMany
     {
         return $this->hasMany(CopilotToolCall::class, 'message_id');
+    }
+
+    /**
+     * The detailed report left with a thumbs-down rating, if any.
+     */
+    public function feedback(): HasOne
+    {
+        return $this->hasOne(CopilotFeedback::class, 'message_id');
     }
 
     public function scopeByRole($query, MessageRole $role)

@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace EslamRedaDiv\FilamentCopilot\Livewire;
 
+use EslamRedaDiv\FilamentCopilot\Enums\FeedbackCategory;
+use EslamRedaDiv\FilamentCopilot\Enums\FeedbackStatus;
 use EslamRedaDiv\FilamentCopilot\Enums\MessageRating;
 use EslamRedaDiv\FilamentCopilot\Enums\MessageRole;
+use EslamRedaDiv\FilamentCopilot\Events\CopilotFeedbackSubmitted;
 use EslamRedaDiv\FilamentCopilot\FilamentCopilotPlugin;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotConversation;
+use EslamRedaDiv\FilamentCopilot\Models\CopilotFeedback;
 use EslamRedaDiv\FilamentCopilot\Models\CopilotMessage;
 use EslamRedaDiv\FilamentCopilot\Services\ConversationManager;
 use EslamRedaDiv\FilamentCopilot\Services\ExportService;
 use EslamRedaDiv\FilamentCopilot\Tools\AskUserTool;
 use Filament\Facades\Filament;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -35,6 +40,15 @@ class CopilotChat extends Component
     public array $quickActions = [];
 
     public string $sidebarWidth = "20rem";
+
+    // Detailed thumbs-down form (feedback.detailed).
+    public ?string $feedbackMessageId = null;
+
+    public string $feedbackCategory = '';
+
+    public string $feedbackExpectedAnswer = '';
+
+    public bool $feedbackSuggestsNewTool = false;
 
     public function mount(): void
     {
@@ -180,11 +194,173 @@ class CopilotChat extends Component
             return;
         }
 
+        $message = $this->resolveOwnAssistantMessage($messageId);
+
+        if (! $message) {
+            return;
+        }
+
+        $rating = MessageRating::tryFrom($rating);
+
+        if (! $rating) {
+            return;
+        }
+
+        // Clicking the thumb that is already lit clears the rating.
+        $clearing = $message->rating === $rating;
+
+        // With detailed feedback on, a new thumbs down asks what went wrong
+        // first; the rating is recorded once the form is sent (or skipped).
+        if ($rating === MessageRating::Negative && ! $clearing && static::detailedFeedbackEnabled()) {
+            $this->openFeedbackForm($message);
+
+            return;
+        }
+
+        $message->update([
+            'rating' => $clearing ? null : $rating,
+        ]);
+
+        // A report only stands while the reply is rated thumbs down.
+        if ($message->rating !== MessageRating::Negative) {
+            $this->discardUnreviewedFeedback($message);
+        }
+
+        $this->applyRatingToMessages($messageId, $message->rating?->value);
+    }
+
+    /**
+     * Send the detailed thumbs-down form: records the negative rating and
+     * creates (or updates) the message's feedback report.
+     */
+    public function submitFeedback(): void
+    {
+        if (! config('filament-copilot.feedback.enabled', true) || ! $this->feedbackMessageId) {
+            return;
+        }
+
+        // Re-resolved here rather than trusted from the form state: the id
+        // round-trips through the browser.
+        $message = $this->resolveOwnAssistantMessage($this->feedbackMessageId);
+
+        if (! $message) {
+            $this->closeFeedbackForm();
+
+            return;
+        }
+
+        $this->validate([
+            'feedbackCategory' => ['required', Rule::enum(FeedbackCategory::class)],
+            'feedbackExpectedAnswer' => ['nullable', 'string', 'max:5000'],
+            'feedbackSuggestsNewTool' => ['boolean'],
+        ], attributes: [
+            'feedbackCategory' => __('filament-copilot::filament-copilot.feedback_category'),
+            'feedbackExpectedAnswer' => __('filament-copilot::filament-copilot.feedback_expected_answer'),
+        ]);
+
+        $message->update(['rating' => MessageRating::Negative]);
+
+        $conversation = $message->conversation;
+
+        $feedback = CopilotFeedback::query()->updateOrCreate(
+            ['message_id' => $message->id],
+            [
+                'conversation_id' => $conversation->id,
+                'participant_type' => $conversation->participant_type,
+                'participant_id' => $conversation->participant_id,
+                'panel_id' => $conversation->panel_id,
+                'tenant_type' => $conversation->tenant_type,
+                'tenant_id' => $conversation->tenant_id,
+                'category' => $this->feedbackCategory,
+                'expected_answer' => filled($this->feedbackExpectedAnswer) ? trim($this->feedbackExpectedAnswer) : null,
+                'suggests_new_tool' => $this->feedbackSuggestsNewTool,
+                // New information reopens a report that was already reviewed.
+                'status' => FeedbackStatus::Open,
+                'reviewer_type' => null,
+                'reviewer_id' => null,
+                'reviewed_at' => null,
+            ],
+        );
+
+        event(new CopilotFeedbackSubmitted($feedback));
+
+        $this->closeFeedbackForm();
+        $this->applyRatingToMessages($message->id, MessageRating::Negative->value);
+    }
+
+    /**
+     * Rate thumbs down without filling in the details.
+     */
+    public function skipFeedbackDetails(): void
+    {
+        if (! config('filament-copilot.feedback.enabled', true) || ! $this->feedbackMessageId) {
+            return;
+        }
+
+        $message = $this->resolveOwnAssistantMessage($this->feedbackMessageId);
+
+        $this->closeFeedbackForm();
+
+        if (! $message) {
+            return;
+        }
+
+        $message->update(['rating' => MessageRating::Negative]);
+
+        $this->applyRatingToMessages($message->id, MessageRating::Negative->value);
+    }
+
+    /**
+     * Dismiss the form without rating.
+     */
+    public function closeFeedbackForm(): void
+    {
+        $this->feedbackMessageId = null;
+        $this->feedbackCategory = '';
+        $this->feedbackExpectedAnswer = '';
+        $this->feedbackSuggestsNewTool = false;
+        $this->resetValidation();
+    }
+
+    public static function detailedFeedbackEnabled(): bool
+    {
+        return (bool) config('filament-copilot.feedback.detailed', false);
+    }
+
+    protected function openFeedbackForm(CopilotMessage $message): void
+    {
+        $existing = $message->feedback;
+
+        $this->resetValidation();
+        $this->feedbackMessageId = $message->id;
+        $this->feedbackCategory = $existing?->category?->value ?? '';
+        $this->feedbackExpectedAnswer = (string) ($existing?->expected_answer ?? '');
+        $this->feedbackSuggestsNewTool = (bool) ($existing?->suggests_new_tool ?? false);
+    }
+
+    /**
+     * Remove a report the user withdrew by clearing or flipping the rating.
+     * Reports an admin already reviewed are kept for the record.
+     */
+    protected function discardUnreviewedFeedback(CopilotMessage $message): void
+    {
+        $message->feedback()->where('status', FeedbackStatus::Open->value)->delete();
+    }
+
+    /**
+     * One of the current participant's own assistant replies, or null.
+     *
+     * Ownership is resolved in the database before anything else the caller
+     * sent is looked at: a message from somebody else's conversation must not
+     * even reveal that it exists, so every rejection is the same silent no-op.
+     */
+    protected function resolveOwnAssistantMessage(string $messageId): ?CopilotMessage
+    {
         $user = Filament::auth()->user();
         $panelId = Filament::getCurrentPanel()?->getId();
 
         if (! $user || ! $panelId) {
-            return;
+            return null;
         }
 
         $tenant = Filament::getTenant();
@@ -197,28 +373,13 @@ class CopilotChat extends Component
                 ->forTenant($tenant))
             ->first();
 
-        if (! $message) {
-            return;
-        }
-
-        $rating = MessageRating::tryFrom($rating);
-
-        if (! $rating) {
-            return;
-        }
-
         // Only the copilot's own replies are ratable — never the user's own
         // text, system notices or tool output.
-        if ($message->role !== MessageRole::Assistant) {
-            return;
+        if (! $message || $message->role !== MessageRole::Assistant) {
+            return null;
         }
 
-        // Clicking the thumb that is already lit clears the rating.
-        $message->update([
-            'rating' => $message->rating === $rating ? null : $rating,
-        ]);
-
-        $this->applyRatingToMessages($messageId, $message->rating?->value);
+        return $message;
     }
 
     /**
@@ -274,6 +435,7 @@ class CopilotChat extends Component
         $this->conversationId = null;
         $this->messages = [];
         $this->pendingToolCallId = null;
+        $this->closeFeedbackForm();
         $this->dispatch('copilot-approvals-restored', approvals: []);
         $this->dispatch('copilot-conversation-changed', conversationId: null);
     }
@@ -302,6 +464,7 @@ class CopilotChat extends Component
 
         $this->conversationId = $conversationId;
         $this->messages = $this->getConversationMessages($conversation);
+        $this->closeFeedbackForm();
 
         // A conversation that is paused on a tool approval shows its approval
         // card again, so it can still be approved or rejected after a reload.

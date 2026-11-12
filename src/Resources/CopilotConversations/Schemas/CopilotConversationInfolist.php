@@ -44,6 +44,18 @@ class CopilotConversationInfolist
                                         'tool' => 'gray',
                                         default => 'gray',
                                     }),
+                                TextEntry::make('rating')
+                                    ->label(__('filament-copilot::filament-copilot.feedback_rating'))
+                                    ->badge()
+                                    ->formatStateUsing(fn ($state): string => ($state?->value ?? $state) === 'positive'
+                                        ? __('filament-copilot::filament-copilot.thumbs_up')
+                                        : __('filament-copilot::filament-copilot.thumbs_down'))
+                                    ->color(fn ($state): string => ($state?->value ?? $state) === 'positive' ? 'success' : 'danger')
+                                    ->visible(fn ($record): bool => $record->rating !== null),
+                                TextEntry::make('feedback.category')
+                                    ->label(__('filament-copilot::filament-copilot.feedback_category'))
+                                    ->badge()
+                                    ->visible(fn ($record): bool => $record->feedback !== null),
                                 TextEntry::make('content')
                                     ->label(__('filament-copilot::filament-copilot.content'))
                                     ->markdown()

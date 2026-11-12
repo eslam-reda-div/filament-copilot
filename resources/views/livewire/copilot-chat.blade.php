@@ -499,6 +499,9 @@
                 </div>
             </div>
 
+            {{-- Detailed thumbs-down form --}}
+            @include('filament-copilot::components.feedback-form')
+
             {{-- Conversation loading overlay --}}
             <div x-show="conversationLoading" x-transition.opacity.duration.200ms x-cloak
                 class="absolute inset-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center">

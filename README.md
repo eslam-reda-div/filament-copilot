@@ -124,7 +124,7 @@ Filament Copilot integrates directly into your Filament panels with a chat inter
 - **Authorization Aware** — Respects Filament's authorization policies out of the box.
 - **Fully Translatable** — Every UI string goes through the language files. Ships with English and German, and falls back to English instead of showing raw translation keys.
 - **Publishable Assets, Config, Views, Stubs** — Customize everything to fit your needs.
-- **121 Tests** — Comprehensive test suite covering models, services, tools, Livewire components, views, discovery, enums, config, plugin, and streaming.
+- **250+ Tests** — Covers models, services, tools, Livewire components, views, translations, streaming, and the real Laravel AI agent loop. CI runs them against Laravel AI 0.10, 0.11 and 1.x on PHP 8.3 and 8.4.
 
 ---
 
@@ -348,6 +348,47 @@ Admins get the feedback back in the management dashboard's **Conversations** res
 - a **Has Negative Rating** filter for jumping straight to the conversations that went wrong.
 
 Set `enabled` to `false` to hide the buttons and stop accepting ratings. Ratings already recorded are kept and still reported in the management UI.
+
+#### Detailed feedback and review workflow
+
+```php
+'feedback' => [
+    'enabled' => true,
+    'detailed' => true,
+],
+```
+
+With `detailed` on, a thumbs down opens a short form in the chat instead of rating straight away. It asks for:
+
+- **What went wrong:** wrong data, used the wrong tool or action, incomplete answer, made something up, or something else.
+- **What the answer should have been** (optional).
+- Whether **the copilot needs a tool it doesn't have yet**.
+
+**Skip details** records just the thumbs down. Closing the form records nothing.
+
+How reports are stored and kept up to date:
+
+- Each report is stored in `copilot_feedback`, one per rated reply. A `CopilotFeedbackSubmitted` event is dispatched.
+- Sending the form again updates the report and reopens it if it was already reviewed.
+- Clearing or flipping the thumbs down withdraws a report nobody has reviewed yet. Reviewed reports are kept.
+- Every write is authorized against the signed-in participant's own conversation, like ratings.
+
+The management dashboard gains:
+
+- A **Feedback** resource listing the reports, with a navigation badge counting the open ones.
+  - Filters for status, problem, "new tool needed" and panel.
+  - A view page showing the user's message, the copilot's reply and a link to the conversation.
+  - A **Review** action to set the status (*Open*, *In review*, *Resolved*, *Dismissed*) and add admin notes. The reviewer and review time are recorded.
+  - Bulk *Mark as resolved* and *Mark as dismissed* actions.
+- A **feedback summary** on the dashboard: satisfaction rate, thumbs up and thumbs down over the last 30 days, and open reports.
+- The rating and the report's problem on each message in the **Conversations** view.
+
+Publish and run the new migration when upgrading:
+
+```bash
+php artisan vendor:publish --tag=filament-copilot-migrations
+php artisan migrate
+```
 
 ### Quick Actions
 
@@ -834,6 +875,7 @@ Filament Copilot dispatches the following events that you can listen to:
 | `CopilotToolExecuted`         | A tool is executed                             |
 | `CopilotToolApprovalRequired` | A tool requires user approval before execution |
 | `CopilotRateLimitExceeded`    | A user exceeds their rate limit                |
+| `CopilotFeedbackSubmitted`    | A user sends a detailed thumbs-down report     |
 
 ```php
 // In your EventServiceProvider or event discovery
@@ -855,7 +897,7 @@ class LogToolExecution
 
 ## Models & Database
 
-The package creates 7 database tables:
+The package creates 8 database tables:
 
 | Table                    | Model                 | Description                                                  |
 | ------------------------ | --------------------- | ------------------------------------------------------------ |
@@ -866,6 +908,7 @@ The package creates 7 database tables:
 | `copilot_rate_limits`    | `CopilotRateLimit`    | Per-user rate limit configuration and blocking               |
 | `copilot_token_usages`   | `CopilotTokenUsage`   | Daily token usage tracking per model and provider            |
 | `copilot_agent_memories` | `CopilotAgentMemory`  | Per-user key-value memory store                              |
+| `copilot_feedback`       | `CopilotFeedback`     | Detailed thumbs-down reports and their admin review          |
 
 All models use ULIDs as primary keys and support polymorphic relationships for participant and tenant.
 
@@ -892,11 +935,13 @@ FilamentCopilotPlugin::make()
 
 This adds:
 
-- **Dashboard Page** — With 3 widgets:
+- **Dashboard Page** — With 4 widgets:
   - **Stats Overview** — 4 cards showing total conversations, messages, tool calls, and active users
   - **Token Usage Chart** — 30-day line chart of daily token consumption
   - **Top Users Table** — Sortable table of the most active copilot users
+- **Feedback Summary** — Satisfaction rate, thumbs up / down (last 30 days) and open feedback reports
 - **Conversations Resource** — Browse, view, and manage all copilot conversations, including the thumbs-down count and the "has negative rating" filter from [Message Feedback](#message-feedback)
+- **Feedback Resource** — Review detailed thumbs-down reports (see [Detailed feedback and review workflow](#detailed-feedback-and-review-workflow))
 - **Audit Logs Resource** — Search and filter the complete audit trail
 - **Rate Limits Resource** — Manage per-user rate limits and blocking
 
