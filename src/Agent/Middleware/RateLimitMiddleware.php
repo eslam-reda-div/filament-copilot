@@ -30,7 +30,7 @@ class RateLimitMiddleware
         if (! $service->canSendMessage($this->user, $this->panelId, $this->tenant)) {
             event(new CopilotRateLimitExceeded($this->user, $this->panelId, $this->tenant));
 
-            throw new \RuntimeException('Rate limit exceeded. Please try again later.');
+            throw new \RuntimeException(__('filament-copilot::filament-copilot.rate_limit_exceeded'));
         }
 
         $response = $next($prompt);

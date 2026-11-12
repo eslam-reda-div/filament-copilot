@@ -26,25 +26,32 @@ class ExportService
             return null;
         }
 
+        $label = fn (string $key, array $replace = []): string => __("filament-copilot::filament-copilot.{$key}", $replace);
+
         $lines = [
             "# {$conversation->title}",
             '',
-            "**Date:** {$conversation->created_at->format('Y-m-d H:i')}",
-            "**Panel:** {$conversation->panel_id}",
+            '**'.$label('export_date').":** {$conversation->created_at->format('Y-m-d H:i')}",
+            '**'.$label('export_panel').":** {$conversation->panel_id}",
             '',
             '---',
             '',
         ];
 
         foreach ($conversation->messages as $message) {
+            // Turns that only called tools or paused for approval have no text.
+            if (blank($message->content)) {
+                continue;
+            }
+
             $role = match ($message->role->value) {
-                'user' => '**You:**',
-                'assistant' => '**Copilot:**',
-                'system' => '**System:**',
-                'tool' => '**Tool:**',
+                'user' => $label('export_you'),
+                'assistant' => $label('export_copilot'),
+                'system' => $label('export_system'),
+                'tool' => $label('export_tool'),
             };
 
-            $lines[] = $role;
+            $lines[] = "**{$role}:**";
             $lines[] = '';
             $lines[] = $message->content;
             $lines[] = '';
@@ -53,7 +60,7 @@ class ExportService
         $totalTokens = $conversation->messages->sum(fn (CopilotMessage $m) => ($m->input_tokens ?? 0) + ($m->output_tokens ?? 0));
         $lines[] = '---';
         $lines[] = '';
-        $lines[] = "*Total tokens used: {$totalTokens}*";
+        $lines[] = '*'.$label('export_total_tokens', ['count' => $totalTokens]).'*';
 
         return implode("\n", $lines);
     }

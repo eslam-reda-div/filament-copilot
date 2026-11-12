@@ -62,7 +62,7 @@ class CopilotRateLimitsTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (CopilotRateLimit $record) => ! $record->is_blocked)
-                    ->action(fn (CopilotRateLimit $record) => $record->block('Blocked by admin')),
+                    ->action(fn (CopilotRateLimit $record) => $record->block(__('filament-copilot::filament-copilot.blocked_by_admin'))),
                 Action::make('unblock')
                     ->label(__('filament-copilot::filament-copilot.unblock'))
                     ->icon('heroicon-o-check-circle')

@@ -1,0 +1,138 @@
+<?php
+
+return [
+
+    // General
+    'title' => 'Copilot',
+    'open_copilot' => 'Copilot öffnen',
+    'close' => 'Schließen',
+    'send' => 'Senden',
+    'loading' => 'Wird geladen',
+    'new_line' => 'neue Zeile',
+    'hint_send' => 'senden',
+    'cancel' => 'Abbrechen',
+    'confirm' => 'Bestätigen',
+    'save' => 'Speichern',
+    'delete' => 'Löschen',
+    'enabled' => 'Aktiviert',
+    'disabled' => 'Deaktiviert',
+    'yes' => 'Ja',
+    'no' => 'Nein',
+
+    // Chat
+    'welcome_message' => 'Wie kann ich dir heute helfen?',
+    'input_placeholder' => 'Frag deinen Copilot …',
+    'new_conversation' => 'Neue Unterhaltung',
+    'history' => 'Verlauf',
+    'conversation_history' => 'Unterhaltungsverlauf',
+    'no_conversations' => 'Noch keine Unterhaltungen.',
+    'untitled' => 'Unbenannte Unterhaltung',
+    'confirm_delete' => 'Möchtest du diese Unterhaltung wirklich löschen?',
+    'export' => 'Unterhaltung exportieren',
+
+    // Messages
+    'rate_limit_exceeded' => 'Du hast das Nutzungslimit überschritten. Bitte versuche es später erneut.',
+    'error_occurred' => 'Ein Fehler ist aufgetreten',
+    'stream_error' => 'Etwas ist schiefgelaufen. Bitte versuche es erneut. (Ref.: :ref)',
+    'conversation_not_found' => 'Unterhaltung nicht gefunden.',
+    'conversation_cannot_be_resumed' => 'Diese Unterhaltung kann nicht fortgesetzt werden.',
+
+    // Tool Calls
+    'tool' => 'Werkzeug',
+    'tool_arguments' => 'Argumente',
+    'tool_result' => 'Ergebnis',
+    'tool_error' => 'Fehler',
+    'tool_execution_failed' => 'Die Ausführung des Werkzeugs ist fehlgeschlagen.',
+
+    // Message Feedback
+    'feedback_helpful' => 'Hilfreich',
+    'feedback_not_helpful' => 'Nicht hilfreich',
+    'feedback_remove_helpful' => 'Bewertung „Hilfreich“ entfernen',
+    'feedback_remove_not_helpful' => 'Bewertung „Nicht hilfreich“ entfernen',
+    'thumbs_up' => 'Daumen hoch',
+    'thumbs_down' => 'Daumen runter',
+    'has_negative_rating' => 'Hat negative Bewertung',
+    'all_conversations' => 'Alle Unterhaltungen',
+    'with_negative_rating' => 'Mit Daumen runter',
+    'without_negative_rating' => 'Ohne Daumen runter',
+
+    // Ask User
+    'question_from_copilot' => 'Der Copilot braucht deine Eingabe:',
+    'approve' => 'Genehmigen',
+    'reject' => 'Ablehnen',
+    'respond' => 'Antworten',
+    'user_approval_required' => 'Diese Aktion wird erst nach deiner Genehmigung ausgeführt.',
+    'approval_required' => 'Genehmigung erforderlich',
+
+    // Navigation & Resources
+    'dashboard' => 'Copilot-Dashboard',
+    'copilot_dashboard' => 'Copilot-Dashboard',
+    'conversations' => 'Unterhaltungen',
+    'conversation' => 'Unterhaltung',
+    'conversation_details' => 'Details der Unterhaltung',
+    'audit_logs' => 'Audit-Protokolle',
+    'audit_log' => 'Audit-Protokoll',
+    'rate_limits' => 'Nutzungslimits',
+    'rate_limit' => 'Nutzungslimit',
+
+    // Table Columns
+    'panel' => 'Panel',
+    'participant_type' => 'Teilnehmertyp',
+    'participant_id' => 'Teilnehmer-ID',
+    'messages' => 'Nachrichten',
+    'action' => 'Aktion',
+    'resource' => 'Ressource',
+    'record' => 'Datensatz',
+    'ip_address' => 'IP-Adresse',
+    'payload' => 'Nutzdaten',
+    'time' => 'Zeit',
+    'created_at' => 'Erstellt am',
+    'updated_at' => 'Aktualisiert am',
+    'role' => 'Rolle',
+    'content' => 'Inhalt',
+    'input_tokens' => 'Eingabe-Tokens',
+    'output_tokens' => 'Ausgabe-Tokens',
+    'total_tokens' => 'Tokens gesamt',
+    'user' => 'Benutzer',
+    'model' => 'Modell',
+    'id' => 'ID',
+    'name' => 'Name',
+    'requests' => 'Anfragen',
+
+    // Rate Limits
+    'target' => 'Ziel',
+    'limits' => 'Limits',
+    'status' => 'Status',
+    'max_messages_per_hour' => 'Max. Nachrichten / Stunde',
+    'max_messages_per_day' => 'Max. Nachrichten / Tag',
+    'max_tokens_per_hour' => 'Max. Tokens / Stunde',
+    'max_tokens_per_day' => 'Max. Tokens / Tag',
+    'msg_hour' => 'Nachr./Std.',
+    'msg_day' => 'Nachr./Tag',
+    'copilot_enabled' => 'Copilot aktiviert',
+    'is_blocked' => 'Gesperrt',
+    'blocked' => 'Gesperrt',
+    'blocked_until' => 'Gesperrt bis',
+    'blocked_reason' => 'Sperrgrund',
+    'block' => 'Sperren',
+    'unblock' => 'Entsperren',
+    'blocked_by_admin' => 'Von einem Administrator gesperrt',
+
+    // Conversation Export
+    'export_you' => 'Du',
+    'export_copilot' => 'Copilot',
+    'export_system' => 'System',
+    'export_tool' => 'Werkzeug',
+    'export_date' => 'Datum',
+    'export_panel' => 'Panel',
+    'export_total_tokens' => 'Verbrauchte Tokens insgesamt: :count',
+
+    // Dashboard Widgets
+    'total_conversations' => 'Unterhaltungen gesamt',
+    'tokens_today' => 'Tokens heute',
+    'tokens_this_month' => 'Tokens diesen Monat',
+    'audit_events_today' => 'Audit-Ereignisse heute',
+    'token_usage_last_30_days' => 'Token-Verbrauch (letzte 30 Tage)',
+    'top_users_this_month' => 'Top-Benutzer diesen Monat',
+
+];

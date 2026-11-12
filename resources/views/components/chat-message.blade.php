@@ -19,7 +19,7 @@
 @elseif($isToolCall || $isToolResult || $isTool)
     {{-- Collapsible tool call box --}}
     @php
-        $toolName = $msg['tool_name'] ?? ($msg['name'] ?? 'Tool');
+        $toolName = $msg['tool_name'] ?? ($msg['name'] ?? __('filament-copilot::filament-copilot.tool'));
         $isSuccess = $msg['success'] ?? true;
         $hasResult = !empty($msg['result']);
         $hasError = !empty($msg['error']);
@@ -70,7 +70,7 @@
                 @if (!empty($msg['arguments']))
                     <div class="mb-1">
                         <span
-                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Arguments</span>
+                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_arguments') }}</span>
                         <pre
                             class="text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all mt-0.5 max-h-24 overflow-y-auto">{{ is_string($msg['arguments']) ? $msg['arguments'] : json_encode($msg['arguments'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                     </div>
@@ -78,14 +78,14 @@
                 @if ($hasResult || !empty($msg['content']))
                     <div>
                         <span
-                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Result</span>
+                            class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_result') }}</span>
                         <pre
                             class="text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all mt-0.5 max-h-24 overflow-y-auto">{{ $msg['result'] ?? $msg['content'] }}</pre>
                     </div>
                 @endif
                 @if ($hasError)
                     <div>
-                        <span class="text-[10px] font-semibold text-danger-500 uppercase tracking-wider">Error</span>
+                        <span class="text-[10px] font-semibold text-danger-500 uppercase tracking-wider">{{ __('filament-copilot::filament-copilot.tool_error') }}</span>
                         <p class="text-xs text-danger-600 dark:text-danger-400 mt-0.5">{{ $msg['error'] }}</p>
                     </div>
                 @endif
