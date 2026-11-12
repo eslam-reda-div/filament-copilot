@@ -597,15 +597,20 @@
                                 x-text="JSON.stringify(approval.arguments, null, 2)"></pre>
                         </div>
                     </template>
-                    <div class="mt-3 flex gap-2">
-                        <button type="button" @click="submitApprovals('approve')"
-                            class="rounded-lg bg-success-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-success-500">
-                            Approve
-                        </button>
-                        <button type="button" @click="submitApprovals('reject')"
-                            class="rounded-lg bg-danger-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-danger-500">
-                            Reject
-                        </button>
+                    {{-- Filament's own buttons: styled by Filament's compiled CSS and the
+                         panel theme, so they stay readable in light and dark mode without
+                         depending on utility classes being present in any stylesheet. --}}
+                    <div class="mt-3 flex flex-wrap gap-2" data-copilot-approval-actions>
+                        <x-filament::button type="button" size="sm" color="success"
+                            icon="heroicon-m-check" x-on:click="submitApprovals('approve')"
+                            x-bind:disabled="isStreaming">
+                            {{ __('filament-copilot::filament-copilot.approve') }}
+                        </x-filament::button>
+                        <x-filament::button type="button" size="sm" color="danger" outlined
+                            icon="heroicon-m-x-mark" x-on:click="submitApprovals('reject')"
+                            x-bind:disabled="isStreaming">
+                            {{ __('filament-copilot::filament-copilot.reject') }}
+                        </x-filament::button>
                     </div>
                 </div>
 
