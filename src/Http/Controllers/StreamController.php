@@ -22,6 +22,7 @@ use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Laravel\Ai\Responses\Data\FinishReason;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController
@@ -190,6 +191,7 @@ class StreamController
 
                 $responseText = '';
                 $usage = null;
+                $finishReason = null;
                 $shouldLogToolCalls = config('filament-copilot.audit.enabled', true)
                     && config('filament-copilot.audit.log_tool_calls', true);
 
@@ -391,6 +393,9 @@ class StreamController
                         $this->sendSseEvent('tool_approval_request', ['approvals' => $pendingApprovals]);
                     } elseif ($event instanceof \Laravel\Ai\Streaming\Events\StreamEnd) {
                         $usage = $event->usage;
+                        // The last one wins: it carries the reason the run as
+                        // a whole stopped, not that of an earlier step.
+                        $finishReason = $event->reason;
                     }
                 }
 
@@ -409,15 +414,26 @@ class StreamController
                     ]);
                 }
 
+                // A reply that ran out of output tokens stops mid-sentence (or,
+                // for a reasoning model that spent the budget thinking, is
+                // empty). A paused turn isn't cut off, whatever its reason.
+                $wasTruncated = $finishReason === FinishReason::Length->value && $pendingApprovals === [];
+
                 // Store the complete message. A turn that paused for approval
                 // keeps its pending approvals on the message, so reopening the
                 // conversation can show the approval card again and resume it.
+                // The finish reason lets a reload show the truncation notice.
+                $metadata = array_filter([
+                    'pending_approvals' => $pendingApprovals,
+                    'finish_reason' => $finishReason,
+                ], fn ($value) => $value !== null && $value !== []);
+
                 $assistantMessage = $conversationManager->addAssistantMessage(
                     conversation: $conversation,
                     content: $responseText,
                     inputTokens: TokenUsage::input($usage),
                     outputTokens: TokenUsage::output($usage),
-                    metadata: $pendingApprovals !== [] ? ['pending_approvals' => $pendingApprovals] : null,
+                    metadata: $metadata !== [] ? $metadata : null,
                 );
 
                 // Record token usage
@@ -448,8 +464,13 @@ class StreamController
 
                 // Some models (reasoning models especially) can end a turn
                 // without writing anything. Say so, rather than leaving the
-                // user staring at their own message.
-                if (trim($responseText) === '' && ! $sawToolActivity && $pendingApprovals === []) {
+                // user staring at their own message. Running out of tokens is
+                // the more useful explanation when that is what happened.
+                if ($wasTruncated) {
+                    $this->sendSseEvent('notice', [
+                        'message' => __('filament-copilot::filament-copilot.response_truncated'),
+                    ]);
+                } elseif (trim($responseText) === '' && ! $sawToolActivity && $pendingApprovals === []) {
                     $this->sendSseEvent('notice', [
                         'message' => __('filament-copilot::filament-copilot.empty_response'),
                     ]);
