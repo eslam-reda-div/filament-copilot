@@ -16,6 +16,7 @@ use Illuminate\Support\Collection;
 use Laravel\Ai\Messages\AssistantMessage;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Messages\UserMessage;
+use Laravel\Ai\Responses\Data\FinishReason;
 
 class ConversationManager
 {
@@ -166,6 +167,18 @@ class ConversationManager
                         'content' => $toolCall->tool_output ?? '',
                         'status' => $toolCall->status->value,
                         'requires_approval' => (bool) $toolCall->requires_approval,
+                    ];
+                }
+
+                // The notice the stream showed under a reply that hit the
+                // output token limit, shown again when the chat is reopened
+                // (never for a turn that paused, as the stream doesn't either).
+                if ($message->role === MessageRole::Assistant
+                    && ($message->metadata['finish_reason'] ?? null) === FinishReason::Length->value
+                    && empty($message->metadata['pending_approvals'])) {
+                    $messages[] = [
+                        'role' => MessageRole::System->value,
+                        'content' => __('filament-copilot::filament-copilot.response_truncated'),
                     ];
                 }
 
