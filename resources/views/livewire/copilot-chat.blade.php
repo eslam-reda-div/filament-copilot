@@ -720,9 +720,14 @@
                     </div>
                 </div>
 
-                {{-- SSE Streaming content (stays visible until server-rendered message replaces it) --}}
-                <div x-show="(isStreaming || pendingComplete) && streamedContent" x-cloak wire:ignore.self
-                    data-streaming-overlay class="flex items-start gap-2.5">
+                {{-- SSE Streaming content (stays visible until server-rendered message replaces it).
+                     A style binding, not x-show: x-show shows an element on the next animation
+                     frame (or timer, in a background tab) but nothing cancels that show when the
+                     element is hidden in the meantime. A show still queued when the turn ended
+                     (for example after the tab was hidden mid-stream) ran after the hide and left
+                     an empty bubble on screen. The binding is applied as soon as the state changes. --}}
+                <div x-bind:style="(isStreaming || pendingComplete) && streamedContent ? '' : 'display: none'" x-cloak
+                    wire:ignore.self data-streaming-overlay class="flex items-start gap-2.5">
                     <div
                         class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0 mt-0.5">
                         <x-filament::icon icon="heroicon-o-sparkles"
