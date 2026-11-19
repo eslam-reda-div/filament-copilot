@@ -407,7 +407,7 @@ Define one-click prompt shortcuts that appear in the chat interface.
 'system_prompt' => null,
 ```
 
-Override the default system prompt with your own. The agent uses a carefully crafted default prompt that includes context discovery, tool usage guidelines, and response formatting rules.
+Override the default system prompt with your own. The agent uses a carefully crafted default prompt that includes context discovery, tool usage guidelines, and response formatting rules. A prompt set with `->systemPrompt()` on the plugin is added after the context as "Additional Instructions"; each prompt reaches the model once.
 
 ### Global Tools
 
@@ -836,7 +836,7 @@ The `ContextBuilder` assembles the system prompt from multiple sources:
 3. **Page discovery** — All copilot-enabled pages with descriptions and tools.
 4. **Widget discovery** — All copilot-enabled widgets with descriptions and tools.
 5. **Agent memories** — Previously stored key-value memories for the current user.
-6. **Custom prompt override** — Your own system prompt (if configured).
+6. **Additional instructions** — The prompt set with `->systemPrompt()` on the plugin (if any).
 
 ### Tool Execution Flow
 
@@ -951,14 +951,14 @@ This adds:
 
 ### Custom System Prompt
 
-Override the default system prompt via config or the plugin API:
+Replace the base system prompt via config, or append extra instructions via the plugin API:
 
 ```php
-// config/filament-copilot.php
+// config/filament-copilot.php (replaces the default base prompt)
 'system_prompt' => 'You are a helpful assistant for our e-commerce admin panel. Focus on order management and customer support.',
 ```
 
-Or via the plugin:
+Or via the plugin (added after the context as "Additional Instructions"; the default base prompt stays unless the config value is set):
 
 ```php
 FilamentCopilotPlugin::make()

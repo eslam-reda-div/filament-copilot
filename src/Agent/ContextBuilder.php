@@ -54,6 +54,11 @@ class ContextBuilder
         return $this;
     }
 
+    /**
+     * The config `system_prompt` already replaces the base prompt, and the plugin's
+     * getSystemPrompt() falls back to it, so a custom prompt equal to it is not
+     * appended a second time as "Additional Instructions".
+     */
     public function build(): string
     {
         $sections = [];
@@ -65,7 +70,7 @@ class ContextBuilder
         $sections[] = $this->buildWidgetContext();
         $sections[] = $this->buildMemoryContext();
 
-        if ($this->customPrompt) {
+        if ($this->customPrompt && $this->customPrompt !== config('filament-copilot.system_prompt')) {
             $sections[] = "## Additional Instructions\n{$this->customPrompt}";
         }
 
