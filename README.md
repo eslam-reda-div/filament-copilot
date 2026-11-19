@@ -255,7 +255,9 @@ Set via your `.env` file. See [Supported AI Providers](#supported-ai-providers) 
 
 ```php
 'agent' => [
-    'timeout' => 120, // seconds per provider request
+    'max_tokens' => 4096,  // output tokens per model call; null = provider default
+    'temperature' => 0.3,  // null = provider default
+    'timeout' => 120,      // seconds per provider request
 ],
 
 'chat' => [
@@ -263,7 +265,9 @@ Set via your `.env` file. See [Supported AI Providers](#supported-ai-providers) 
 ],
 ```
 
-`agent.timeout` is passed to every provider request. Raise it for slow or reasoning models. Without it, Laravel AI's default of 60 seconds applies.
+`agent.timeout` is passed to every provider request. Raise it for slow or reasoning models. If it is unset, `null` or empty, 120 seconds apply.
+
+`agent.max_tokens` caps the output of each model call. Reasoning models spend their thinking tokens from the same budget, so raise it if answers come back cut off or empty. Set `max_tokens` or `temperature` to `null` (or an empty value, such as an unset `env()` variable) to leave them to the provider (some models reject a custom temperature). An agent class extending `CopilotAgent` that declares `#[MaxTokens]`, `#[Temperature]` or `#[Timeout]` on itself keeps that value over the config.
 
 While a reasoning model thinks, the chat shows **Thinking…** and lets the user expand the streamed reasoning. Set `chat.stream_reasoning` to `false` to show only the indicator. If a turn ends without the model writing anything, the chat says so instead of showing nothing.
 
