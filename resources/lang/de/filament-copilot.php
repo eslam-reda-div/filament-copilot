@@ -98,6 +98,7 @@ return [
     'show_reasoning' => 'Gedankengang anzeigen',
     'hide_reasoning' => 'Gedankengang ausblenden',
     'empty_response' => 'Der Assistent hat keine Antwort geliefert. Bitte versuche es erneut oder formuliere deine Nachricht um.',
+    'response_truncated' => 'Diese Antwort wurde abgeschnitten, weil sie die maximale Antwortlänge erreicht hat.',
     'unknown_tool' => 'Der Assistent wollte ein Werkzeug verwenden, das nicht verfügbar ist (:tool). Bitte versuche es erneut. (Ref.: :ref)',
     'approve' => 'Genehmigen',
     'reject' => 'Ablehnen',

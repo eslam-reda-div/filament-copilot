@@ -137,9 +137,9 @@ function copilotTestApprovalRequest(array $approvals, int $offset = 0): ToolAppr
     );
 }
 
-function copilotTestStreamEnd(int $input = 5, int $output = 7, int $offset = 10): StreamEnd
+function copilotTestStreamEnd(int $input = 5, int $output = 7, int $offset = 10, string $reason = 'stop'): StreamEnd
 {
-    return new StreamEnd('event-end-'.uniqid(), 'stop', copilotTestUsage($input, $output), time() + $offset);
+    return new StreamEnd('event-end-'.uniqid(), $reason, copilotTestUsage($input, $output), time() + $offset);
 }
 
 /**

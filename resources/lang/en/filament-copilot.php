@@ -98,6 +98,7 @@ return [
     'show_reasoning' => 'Show reasoning',
     'hide_reasoning' => 'Hide reasoning',
     'empty_response' => "The assistant didn't return a response. Please try again, or rephrase your message.",
+    'response_truncated' => 'This reply was cut off because it reached the maximum response length.',
     'unknown_tool' => 'The assistant tried to use a tool that is not available (:tool). Please try again. (ref: :ref)',
     'approve' => 'Approve',
     'reject' => 'Reject',

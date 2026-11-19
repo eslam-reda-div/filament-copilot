@@ -162,6 +162,18 @@ it('runs the agent middleware once per turn even when the turn takes several ste
     expect($reply)->toBe('The tool said hi.');
 });
 
+it('records why the run stopped on the reply, with no truncation notice for a normal finish', function () {
+    realLoopTools([new RealLoopEchoTool]);
+    fakeToolCallThenReply(new ToolCall('call-1', 'echo_tool', ['text' => 'hi']), 'The tool said hi.');
+
+    $events = copilotTestParseSse(copilotTestRunStream(['message' => 'Echo hi']));
+
+    // Several steps, but only the final one's reason is kept.
+    expect(array_column($events, 0))->not->toContain('notice')
+        ->and(CopilotConversation::query()->sole()->messages()->where('role', MessageRole::Assistant)->sole()->metadata)
+        ->toBe(['finish_reason' => 'stop']);
+});
+
 it('blocks a turn in the agent middleware when the rate limit is exhausted', function () {
     config()->set('filament-copilot.rate_limits.enabled', true);
 
@@ -205,6 +217,13 @@ it('pauses for approval through the real loop', function () {
     expect($conversation->metadata['ai_conversation_id'] ?? null)->not->toBeNull()
         ->and(app(ConversationManager::class)->getPendingApprovals($conversation))
         ->toHaveCount(1);
+
+    // A pause is not a truncated reply: the loop ends it with `tool_calls`,
+    // stored next to (not instead of) the pending approvals.
+    $metadata = $conversation->messages()->where('role', MessageRole::Assistant)->sole()->metadata;
+    expect(array_column($first, 0))->not->toContain('notice')
+        ->and($metadata['finish_reason'])->toBe('tool_calls')
+        ->and($metadata['pending_approvals'][0]['id'])->toBe('call-1');
 });
 
 it('resumes an approved turn in the same conversation through the real loop', function () {
@@ -258,7 +277,10 @@ it('pauses on a clarifying question through the real loop', function () {
         ->and($pause[1]['approvals'][0]['question'])->toBe('Which order?')
         ->and($pause[1]['approvals'][0]['options'])->toBe(['#41', '#42'])
         ->and(collect($events)->where(0, 'chunk')->map(fn ($event) => $event[1]['text'])->implode(''))->toBe('Which order?')
-        ->and(array_column($events, 0))->not->toContain('error')->not->toContain('tool_call');
+        ->and(array_column($events, 0))->not->toContain('error')->not->toContain('tool_call')->not->toContain('notice');
+
+    expect(CopilotConversation::query()->sole()->messages()->where('role', MessageRole::Assistant)->sole()->metadata['finish_reason'])
+        ->toBe('tool_calls');
 });
 
 it('answers a clarifying question and continues the turn through the real loop', function () {

@@ -181,6 +181,9 @@
             // line can arrive in separate network chunks, and resetting it per
             // chunk silently dropped that event.
             let currentEvent = null;
+            // Notices are about the reply, so they are added to the chat
+            // after it rather than above it.
+            const notices = [];
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -218,7 +221,7 @@
                                     this.reasoning += data.text || '';
                                     break;
                                 case 'notice':
-                                    $wire.dispatchSelf('copilot-stream-notice', { message: data.message });
+                                    notices.push(data.message);
                                     break;
                                 case 'tool_call':
                                     this.toolCalls.push({
@@ -330,6 +333,8 @@
                 this.isStreaming = false;
                 this.toolCalls = [];
             }
+
+            notices.forEach(message => $wire.dispatchSelf('copilot-stream-notice', { message }));
         } catch (error) {
             this._abortController = null;
 
