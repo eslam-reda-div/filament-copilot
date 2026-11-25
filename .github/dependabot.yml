@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # GitHub Actions used by the workflows (pinned to commit SHAs; Dependabot
+  # bumps the SHA and the version comment together).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
+
+  # PHP dependencies (composer.json).
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      composer-dev:
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+
+  # Asset build tooling (Tailwind CLI).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        patterns: ['*']
+    commit-message:
+      prefix: deps-dev
