@@ -1,5 +1,10 @@
 version: 2
 
+# Every entry has a cooldown: a new release is only proposed after it has
+# been public for a few days, so a malicious or broken release is usually
+# found and pulled before it reaches this project. Bigger jumps wait longer.
+# The shortest wait anywhere is 3 days.
+
 updates:
   # GitHub Actions used by the workflows (pinned to commit SHAs; Dependabot
   # bumps the SHA and the version comment together).
@@ -7,6 +12,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns: ['*']
@@ -18,6 +25,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     open-pull-requests-limit: 10
     groups:
       composer-dev:
@@ -32,6 +44,11 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       npm:
         patterns: ['*']
